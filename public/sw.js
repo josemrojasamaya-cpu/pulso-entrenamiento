@@ -25,7 +25,7 @@
 // La versión se cambia a mano en cada despliegue que toque estos
 // archivos. Si no cambia, `activate` no borra las cachés viejas y la
 // corrección desplegada nunca llega.
-const VERSION = "pulso-v15";
+const VERSION = "pulso-v17";
 const CACHE_APP = `${VERSION}-app`;
 
 const ARCHIVOS = [
@@ -37,6 +37,7 @@ const ARCHIVOS = [
     "/perfil.html",
     "/ranking.html",
     "/grupos.html",
+    "/salud.html",
     "/entrenador.html",
     "/login.html",
     "/terminos.html",

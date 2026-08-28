@@ -472,3 +472,87 @@ CREATE TABLE IF NOT EXISTS reto_participantes (
     unido_en    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (reto_id, usuario_id)
 );
+
+
+-- ---------------------------------------------------------------------
+--  Dispositivos vinculados
+--
+--  Guarda con qué se conectó la persona, no credenciales de terceros.
+--  Los dos caminos que no dependen de nadie:
+--
+--    bluetooth  el navegador habla directo con el aparato por el
+--               servicio estándar de Bluetooth. Sin claves, sin permisos
+--               y sin costo.
+--    archivo    la persona exporta sus datos de donde sea y los sube.
+--               Todas las marcas permiten exportar; es un derecho, no
+--               una concesión.
+--
+--  `oauth` queda declarado para el día que se pague el acceso de alguna
+--  plataforma, pero hoy ninguna integración lo usa.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS dispositivos (
+    id           SERIAL PRIMARY KEY,
+    usuario_id   INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    nombre       VARCHAR(120) NOT NULL,
+    marca        VARCHAR(60),
+    tipo         VARCHAR(30) NOT NULL,
+        -- banda_pecho | pulsera | reloj | bascula | tensiometro | telefono | otro
+    via          VARCHAR(20) NOT NULL DEFAULT 'bluetooth',
+        -- bluetooth | archivo | oauth | manual
+    identificador VARCHAR(120),
+    ultima_lectura TIMESTAMPTZ,
+    activo       BOOLEAN NOT NULL DEFAULT TRUE,
+    vinculado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_disp_usuario ON dispositivos (usuario_id, activo);
+
+
+-- ---------------------------------------------------------------------
+--  Hidratación
+--
+--  Se registra en vasos y no en mililitros porque nadie sabe cuántos
+--  mililitros tomó: sabe cuántos vasos. La equivalencia se guarda por
+--  si alguien la quiere precisa.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS hidratacion (
+    id          BIGSERIAL PRIMARY KEY,
+    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    fecha       DATE NOT NULL DEFAULT CURRENT_DATE,
+    ml          INTEGER NOT NULL,
+    origen      VARCHAR(20) NOT NULL DEFAULT 'manual',
+    registrado  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agua_usuario ON hidratacion (usuario_id, fecha DESC);
+
+-- Meta diaria y recordatorios, en el perfil porque son preferencias.
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS meta_agua_ml INTEGER NOT NULL DEFAULT 2500;
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS vaso_ml INTEGER NOT NULL DEFAULT 250;
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS recordar_agua BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS recordar_cada_min INTEGER NOT NULL DEFAULT 90;
+
+
+-- ---------------------------------------------------------------------
+--  Galería de evolución
+--
+--  Las fotos se guardan como datos en la base y no como archivos en
+--  disco: en un servidor que se reinicia y borra el disco -que es lo
+--  normal en los planes gratuitos- un archivo se pierde y la fila
+--  queda apuntando a la nada.
+--
+--  Son privadas. No se comparten con ningún grupo salvo que la persona
+--  lo elija explícitamente, y eso está escrito en los términos.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fotos (
+    id          SERIAL PRIMARY KEY,
+    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    fecha       DATE NOT NULL DEFAULT CURRENT_DATE,
+    angulo      VARCHAR(20) NOT NULL DEFAULT 'frente',  -- frente | perfil | espalda
+    imagen      TEXT NOT NULL,          -- data URI, ya reducida en el navegador
+    peso_kg     NUMERIC(5,2),
+    nota        VARCHAR(200),
+    subida_en   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_fotos_usuario ON fotos (usuario_id, fecha DESC);

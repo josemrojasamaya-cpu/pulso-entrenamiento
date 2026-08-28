@@ -187,7 +187,8 @@ const ICONOS = {
   progreso: '<path d="M3 3v18h18M7 15l4-5 3 3 5-7"/>',
   ranking:  '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
   grupos:   '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
-  perfil:   '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/>'
+  perfil:   '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/>',
+  salud:    '<path d="M20.8 5.6a5.5 5.5 0 0 0-7.8 0L12 6.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>'
 };
 
 function pintarEstructura(activo) {
@@ -220,7 +221,7 @@ function pintarEstructura(activo) {
     // mucho menos que competir con tu gente.
     const enlaces = [
       { id:"hoy",      txt:"Hoy",      href:"hoy.html" },
-      { id:"medidas",  txt:"Medidas",  href:"medidas.html" },
+      { id:"salud",    txt:"Salud",    href:"salud.html" },
       { id:"progreso", txt:"Progreso", href:"progreso.html" },
       { id:"grupos",   txt:"Grupos",   href:"grupos.html" },
       { id:"perfil",   txt:"Perfil",   href:"perfil.html" }

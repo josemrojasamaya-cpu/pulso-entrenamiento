@@ -57,6 +57,9 @@
 <header class="top" id="top"></header>
 
 <main class="pagina">
+  <div style="margin-bottom:12px">
+    <a href="progreso.html" style="font-size:13px; color:var(--tx2); text-decoration:none">← Volver a progreso</a>
+  </div>
   <div class="titulo">
     <h1>Medidas corporales</h1>
     <p>Medite cada cuatro a seis semanas. Antes de eso el cambio real se pierde bajo el error de la cinta.</p>
@@ -180,7 +183,7 @@ const GRUPOS = [
 ];
 
 async function cargar() {
-  pintarEstructura("medidas");
+  pintarEstructura("progreso");
   try {
     mediciones = await api(`/atleta/${usuario.id}/mediciones`);
     pintar();

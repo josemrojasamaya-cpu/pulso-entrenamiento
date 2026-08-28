@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1620">
+<title>Pulso · Salud y dispositivos</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+.solapas-s{display:flex; gap:4px; padding:4px; margin-bottom:18px;
+  background:var(--gr-850); border:1px solid var(--borde); border-radius:11px; overflow-x:auto}
+.solapas-s button{
+  flex:1; min-width:88px; padding:9px 8px; border:none; border-radius:8px; cursor:pointer;
+  background:none; color:var(--tx2); font:inherit; font-size:13px; font-weight:600; white-space:nowrap;
+}
+.solapas-s button.on{background:var(--az); color:#fff}
+.panel-s{display:none} .panel-s.on{display:block}
+
+/* Agua */
+.vaso-grande{
+  position:relative; width:150px; height:190px; margin:0 auto 16px;
+  border:3px solid var(--borde); border-top:none;
+  border-radius:0 0 22px 22px; overflow:hidden; background:var(--gr-900);
+}
+.agua{
+  position:absolute; left:0; right:0; bottom:0;
+  background:linear-gradient(180deg,#4a8ee0,#1b5fa8);
+  transition:height .5s cubic-bezier(.3,.8,.4,1);
+}
+.agua::before{
+  content:""; position:absolute; top:-7px; left:0; right:0; height:14px;
+  background:#5c9ce8; border-radius:50%; opacity:.8;
+}
+.vaso-txt{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; z-index:2;
+}
+.vaso-txt b{font-size:27px; font-weight:800; text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.vaso-txt span{font-size:12.5px; color:var(--tx2); text-shadow:0 1px 4px rgba(0,0,0,.6)}
+
+.botones-agua{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px}
+.btn-agua{
+  padding:13px 8px; border:1px solid var(--borde); border-radius:11px;
+  background:var(--gr-750); color:var(--tx); font:inherit; cursor:pointer; transition:.15s;
+}
+.btn-agua:hover{border-color:var(--az); background:var(--az-tenue)}
+.btn-agua b{display:block; font-size:15px; font-weight:700}
+.btn-agua span{display:block; font-size:11px; color:var(--tx3)}
+
+.barras-sem{display:flex; align-items:flex-end; gap:5px; height:76px; margin-top:12px}
+.barra-sem{flex:1; display:flex; flex-direction:column; justify-content:flex-end;
+  align-items:center; gap:4px; height:100%}
+.barra-sem .col{width:100%; background:linear-gradient(180deg,#4a8ee0,#1b5fa8);
+  border-radius:4px 4px 0 0; min-height:3px}
+.barra-sem .col.meta{background:linear-gradient(180deg,var(--ok),#1d7a54)}
+.barra-sem .et{font-size:9.5px; color:var(--tx3)}
+
+/* Dispositivos */
+.disp{
+  display:flex; align-items:center; gap:13px; padding:13px 0;
+  border-bottom:1px solid var(--borde);
+}
+.disp:last-child{border-bottom:none}
+.disp .ico{
+  width:38px; height:38px; border-radius:11px; flex:none; display:grid; place-items:center;
+  background:var(--gr-750);
+}
+.disp .ico svg{width:19px; height:19px; stroke:var(--az); fill:none; stroke-width:1.9}
+.disp .tx{flex:1; min-width:0}
+.disp .tx b{display:block; font-size:14.5px; font-weight:650}
+.disp .tx span{font-size:12px; color:var(--tx3)}
+
+.vivo{
+  background:linear-gradient(150deg,var(--az-tenue),var(--gr-850));
+  border:1px solid var(--az-3); border-radius:var(--radio);
+  padding:20px; text-align:center; margin-bottom:14px;
+}
+.vivo .bpm{font-size:52px; font-weight:800; line-height:1; color:var(--az);
+  font-variant-numeric:tabular-nums}
+.vivo .bpm small{font-size:16px; color:var(--tx2); font-weight:600}
+.latido{display:inline-block; animation:latir 1s ease-in-out infinite}
+@keyframes latir{0%,100%{transform:scale(1)}22%{transform:scale(1.18)}44%{transform:scale(1)}}
+
+.zona{display:flex; gap:3px; margin-top:14px}
+.zona div{flex:1; height:7px; border-radius:3px; background:var(--gr-750)}
+.zona div.on{background:currentColor}
+
+/* Galería */
+.rejilla-fotos{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px}
+.foto{position:relative; border-radius:11px; overflow:hidden; background:var(--gr-850);
+  border:1px solid var(--borde); aspect-ratio:3/4}
+.foto img{width:100%; height:100%; object-fit:cover; display:block}
+.foto .pie{
+  position:absolute; left:0; right:0; bottom:0; padding:8px 10px;
+  background:linear-gradient(180deg,transparent,rgba(4,7,11,.92));
+  font-size:11.5px;
+}
+.foto .pie b{display:block; font-size:12.5px}
+.foto .quitar{
+  position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:8px;
+  background:rgba(6,10,16,.75); border:none; color:#eda6a3; cursor:pointer; font-size:15px;
+}
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="pagina">
+  <div class="titulo">
+    <h1>Salud</h1>
+    <p>Todo lo que tu cuerpo dice fuera del gimnasio.</p>
+  </div>
+
+  <div class="solapas-s">
+    <button class="on" onclick="verPanel('agua', this)">Agua</button>
+    <button onclick="verPanel('sueno', this)">Sueño</button>
+    <button onclick="verPanel('dispositivos', this)">Dispositivos</button>
+    <button onclick="verPanel('fotos', this)">Galería</button>
+  </div>
+
+  <div class="panel-s on" id="p-agua"><div class="cargando">Cargando…</div></div>
+  <div class="panel-s" id="p-sueno"></div>
+  <div class="panel-s" id="p-dispositivos"></div>
+  <div class="panel-s" id="p-fotos"></div>
+</main>
+
+<nav class="tabs" id="tabs"></nav>
+
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const usuario = Sesion.exigir();
+let agua = null, cargados = {};
+
+function verPanel(cual, boton) {
+  document.querySelectorAll(".panel-s").forEach(p => p.classList.remove("on"));
+  document.querySelectorAll(".solapas-s button").forEach(b => b.classList.remove("on"));
+  document.getElementById("p-" + cual).classList.add("on");
+  boton.classList.add("on");
+  if (!cargados[cual]) { cargados[cual] = true; cargar(cual); }
+}
+
+function cargar(cual) {
+  if (cual === "agua") verAgua();
+  if (cual === "sueno") verSueno();
+  if (cual === "dispositivos") verDispositivos();
+  if (cual === "fotos") verFotos();
+}
+
+/* ── Agua ─────────────────────────────────────────────────────────── */
+
+async function verAgua() {
+  try { agua = await api("/salud/agua"); }
+  catch (err) {
+    document.getElementById("p-agua").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+    return;
+  }
+
+  const maxSem = Math.max(agua.meta, ...agua.semana.map(d => d.total), 1);
+  const dias = ["dom","lun","mar","mié","jue","vie","sáb"];
+
+  document.getElementById("p-agua").innerHTML = `
+    <div class="tarjeta" style="margin-bottom:16px"><div class="t-cu">
+      <div class="vaso-grande">
+        <div class="agua" style="height:${agua.porcentaje}%"></div>
+        <div class="vaso-txt">
+          <b>${(agua.hoy / 1000).toFixed(1)} L</b>
+          <span>de ${(agua.meta / 1000).toFixed(1)} L</span>
+        </div>
+      </div>
+
+      <div style="text-align:center; font-size:13px; color:var(--tx2); margin-bottom:14px">
+        ${agua.hoy >= agua.meta
+          ? "Meta cumplida. Buen trabajo."
+          : `Te faltan ${((agua.meta - agua.hoy) / 1000).toFixed(1)} L · ${agua.veces} ${agua.veces === 1 ? "vez" : "veces"} hoy`}
+      </div>
+
+      <div class="botones-agua">
+        <button class="btn-agua" onclick="tomar(${Math.round(agua.vaso / 2)})">
+          <b>½</b><span>${Math.round(agua.vaso / 2)} ml</span></button>
+        <button class="btn-agua" onclick="tomar(${agua.vaso})">
+          <b>1 vaso</b><span>${agua.vaso} ml</span></button>
+        <button class="btn-agua" onclick="tomar(${agua.vaso * 2})">
+          <b>Botella</b><span>${agua.vaso * 2} ml</span></button>
+      </div>
+      ${agua.veces > 0 ? `<button class="btn sec chico" onclick="deshacerAgua()"
+        style="width:100%">Deshacer el último</button>` : ""}
+    </div></div>
+
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="t-cab"><h2>Últimos siete días</h2></div>
+      <div class="t-cu">
+        <div class="barras-sem">
+          ${Array.from({length: 7}, (_, i) => {
+            const d = new Date(); d.setDate(d.getDate() - (6 - i));
+            const clave = d.toISOString().slice(0, 10);
+            const fila = agua.semana.find(x => String(x.fecha).slice(0, 10) === clave);
+            const total = fila ? fila.total : 0;
+            return `<div class="barra-sem" title="${(total/1000).toFixed(1)} L">
+              <div class="col ${total >= agua.meta ? "meta" : ""}"
+                   style="height:${Math.max(3, (total / maxSem) * 100)}%"></div>
+              <div class="et">${dias[d.getDay()]}</div>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <div class="t-cab"><h2>Recordatorios</h2></div>
+      <div class="t-cu">
+        <p style="font-size:13px; color:var(--tx2); line-height:1.55; margin-bottom:14px">
+          Un aviso cada tanto mientras tengas la aplicación abierta. No se envía nada
+          a ningún servidor: la notificación sale de tu propio teléfono.
+        </p>
+        <label class="ficha ${agua.recordar ? "on" : ""}" style="width:100%; justify-content:center">
+          <input type="checkbox" id="rec-agua" ${agua.recordar ? "checked" : ""}
+                 onchange="cambiarRecordatorio(this)">
+          Recordarme tomar agua
+        </label>
+        <div class="rejilla r-2" style="margin-top:14px">
+          <label class="campo"><span>Meta diaria (ml)</span>
+            <input type="number" id="meta-agua" value="${agua.meta}" step="100" min="500" max="8000"></label>
+          <label class="campo"><span>Tu vaso (ml)</span>
+            <input type="number" id="vaso-agua" value="${agua.vaso}" step="50" min="50" max="2000"></label>
+        </div>
+        <button class="btn sec" onclick="guardarAgua()" style="width:100%">Guardar</button>
+        <div id="agua-msg" style="margin-top:10px"></div>
+      </div>
+    </div>`;
+}
+
+async function tomar(ml) {
+  try {
+    const r = await api("/salud/agua", { method: "POST", body: { ml } });
+    agua.hoy = r.hoy; agua.veces++;
+    agua.porcentaje = Math.min(100, Math.round((r.hoy / agua.meta) * 100));
+    verAgua();
+    if (navigator.vibrate) navigator.vibrate(35);
+  } catch (err) { alert(err.message); }
+}
+
+async function deshacerAgua() {
+  try { await api("/salud/agua/ultimo", { method: "DELETE" }); verAgua(); }
+  catch (err) { alert(err.message); }
+}
+
+async function guardarAgua() {
+  try {
+    await api("/salud/agua/preferencias", { method: "PUT", body: {
+      meta_agua_ml: Number(document.getElementById("meta-agua").value),
+      vaso_ml: Number(document.getElementById("vaso-agua").value)
+    }});
+    document.getElementById("agua-msg").innerHTML = `<div class="aviso ok">Guardado.</div>`;
+    verAgua();
+  } catch (err) {
+    document.getElementById("agua-msg").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+/**
+ * Recordatorios de hidratación.
+ *
+ * Salen del propio teléfono con la API de notificaciones del navegador:
+ * no hay servidor de envío ni servicio de terceros. La contrapartida es
+ * que sólo suenan mientras la aplicación esté abierta o en segundo
+ * plano, y eso se dice en pantalla en vez de prometer de más.
+ */
+let temporizadorAgua = null;
+
+async function cambiarRecordatorio(caja) {
+  caja.closest(".ficha").classList.toggle("on", caja.checked);
+
+  if (caja.checked && "Notification" in window) {
+    const permiso = await Notification.requestPermission();
+    if (permiso !== "granted") {
+      caja.checked = false;
+      caja.closest(".ficha").classList.remove("on");
+      alert("Sin permiso de notificaciones no se pueden mandar recordatorios. " +
+            "Podés activarlo desde los ajustes del navegador.");
+      return;
+    }
+  }
+
+  await api("/salud/agua/preferencias", { method: "PUT",
+    body: { recordar_agua: caja.checked } }).catch(() => {});
+  armarRecordatorio(caja.checked);
+}
+
+function armarRecordatorio(activo) {
+  clearInterval(temporizadorAgua);
+  if (!activo) return;
+
+  const cada = (agua && agua.cada_min ? agua.cada_min : 90) * 60 * 1000;
+  temporizadorAgua = setInterval(() => {
+    if (Notification.permission !== "granted") return;
+    // No se avisa si ya cumplió la meta: un recordatorio innecesario es
+    // la forma más rápida de que la gente desactive las notificaciones.
+    if (agua && agua.hoy >= agua.meta) return;
+    new Notification("Tomá agua", {
+      body: agua ? `Llevás ${(agua.hoy / 1000).toFixed(1)} L de ${(agua.meta / 1000).toFixed(1)} L hoy.` : "",
+      icon: "/icono.svg", tag: "pulso-agua"
+    });
+  }, cada);
+}
+
+/* ── Sueño ────────────────────────────────────────────────────────── */
+
+async function verSueno() {
+  let d;
+  try { d = await api("/salud/sueno"); }
+  catch (err) {
+    document.getElementById("p-sueno").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+    return;
+  }
+
+  const max = Math.max(9, ...d.noches.map(n => n.horas));
+
+  document.getElementById("p-sueno").innerHTML = `
+    <div class="metricas" style="margin-bottom:16px">
+      <div class="metrica">
+        <b>${d.promedio_horas !== null ? d.promedio_horas : "—"}<small style="font-size:15px;color:var(--tx3)"> h</small></b>
+        <span>Promedio</span>
+      </div>
+      <div class="metrica">
+        <b style="${d.noches_cortas > 3 ? "color:var(--alerta)" : ""}">${d.noches_cortas}</b>
+        <span>Noches de menos de 7 h</span>
+      </div>
+      <div class="metrica"><b>${d.noches.length}</b><span>Noches registradas</span></div>
+    </div>
+
+    ${d.promedio_horas !== null && d.promedio_horas < 6.5 ? `
+      <div class="aviso alerta" style="margin-bottom:16px">
+        <b>Estás durmiendo poco</b>
+        Con menos de siete horas, la recuperación entre sesiones se resiente y el riesgo
+        de lesión sube. Si venís estancado, esto suele explicar más que el entrenamiento.
+      </div>` : ""}
+
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="t-cab"><h2>Anoche</h2></div>
+      <div class="t-cu">
+        <div class="rejilla r-2">
+          <label class="campo"><span>Cuántas horas dormiste</span>
+            <input type="number" id="s-horas" step="0.5" min="0" max="20" placeholder="7.5"></label>
+          <label class="campo"><span>Fecha</span>
+            <input type="date" id="s-fecha" value="${hoyISO()}"></label>
+        </div>
+        <button class="btn" onclick="guardarSueno()" style="width:100%">Registrar</button>
+        <div id="s-msg" style="margin-top:10px"></div>
+        <p style="font-size:12.5px; color:var(--tx3); margin-top:12px; line-height:1.55">
+          Si usás reloj o pulsera, no hace falta escribirlo: importá el archivo desde
+          la pestaña Dispositivos y el sueño entra solo.
+        </p>
+      </div>
+    </div>
+
+    ${d.noches.length ? `
+      <div class="tarjeta">
+        <div class="t-cab"><h2>Último mes</h2>
+          <div class="der"><span class="eti gris">la línea marca 7 h</span></div>
+        </div>
+        <div class="t-cu">
+          <div class="barras-sem" style="height:110px; position:relative">
+            <div style="position:absolute; left:0; right:0; border-top:1px dashed var(--az);
+                        opacity:.5; bottom:${(7 / max) * 100}%"></div>
+            ${d.noches.slice(-21).map(n => `
+              <div class="barra-sem" title="${n.horas} h · ${fecha(n.fecha)}">
+                <div class="col ${n.horas < 7 ? "" : "meta"}"
+                     style="height:${Math.max(3, (n.horas / max) * 100)}%"></div>
+              </div>`).join("")}
+          </div>
+        </div>
+      </div>` : `
+      <div class="tarjeta"><div class="vacio">
+        Sin noches registradas todavía.
+      </div></div>`}`;
+}
+
+async function guardarSueno() {
+  const horas = Number(document.getElementById("s-horas").value);
+  try {
+    await api("/salud/sueno", { method: "POST", body: {
+      horas, fecha: document.getElementById("s-fecha").value
+    }});
+    verSueno();
+  } catch (err) {
+    document.getElementById("s-msg").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+/* ── Dispositivos ─────────────────────────────────────────────────── */
+
+const ICONO_DISP = {
+  banda_pecho: '<path d="M20.8 5.6a5.5 5.5 0 0 0-7.8 0L12 6.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>',
+  pulsera: '<rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9 6V3h6v3M9 18v3h6v-3"/>',
+  reloj: '<circle cx="12" cy="12" r="6"/><path d="M12 9v3l2 1M9 3h6M9 21h6"/>',
+  bascula: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 7v4M8 11h8"/>',
+  tensiometro: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  telefono: '<rect x="7" y="2" width="10" height="20" rx="3"/><path d="M11 18h2"/>',
+  otro: '<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>'
+};
+
+async function verDispositivos() {
+  let d;
+  try { d = await api("/salud/dispositivos"); }
+  catch (err) {
+    document.getElementById("p-dispositivos").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+    return;
+  }
+
+  const hayBT = "bluetooth" in navigator;
+
+  document.getElementById("p-dispositivos").innerHTML = `
+    <div id="lectura-viva"></div>
+
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="t-cab"><h2>Conectar por Bluetooth</h2></div>
+      <div class="t-cu">
+        <p style="font-size:13px; color:var(--tx2); line-height:1.6; margin-bottom:14px">
+          Funciona con cualquier banda de pecho, pulsera o tensiómetro que use el
+          <strong>servicio estándar de Bluetooth</strong> —Polar, Garmin, Wahoo, Coospo,
+          Magene, Decathlon y la mayoría de los genéricos—. Se conecta directo con tu
+          teléfono: <strong>sin cuentas, sin permisos de la marca y sin costo.</strong>
+        </p>
+
+        ${hayBT ? `
+          <button class="btn" onclick="conectarBluetooth()" style="width:100%" id="btn-bt">
+            Buscar dispositivo
+          </button>` : `
+          <div class="aviso alerta">
+            <b>Este navegador no permite Bluetooth</b>
+            Funciona en Chrome, Edge y Opera, en Android y en computadora.
+            En iPhone, Safari no lo permite: ahí queda la importación de archivos.
+          </div>`}
+      </div>
+    </div>
+
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="t-cab"><h2>Importar desde otra aplicación</h2></div>
+      <div class="t-cu">
+        <p style="font-size:13px; color:var(--tx2); line-height:1.6; margin-bottom:12px">
+          Exportá tus datos de donde estén —Garmin, Fitbit, Samsung Health, Apple Salud,
+          Strava, Huawei, Xiaomi, Amazfit— y subí el archivo acá. <strong>Todas las
+          plataformas permiten exportar</strong>: es un derecho, no una concesión.
+        </p>
+        <p style="font-size:12.5px; color:var(--tx3); line-height:1.55; margin-bottom:14px">
+          Se leen archivos <strong>GPX</strong>, <strong>TCX</strong> y <strong>CSV</strong>.
+          Si tu reloj sólo ofrece FIT, en la misma pantalla de descarga suele haber
+          también TCX, que trae lo mismo.
+        </p>
+
+        <input type="file" id="archivo" accept=".gpx,.tcx,.csv,.txt"
+               style="display:none" onchange="revisarArchivo(this)">
+        <button class="btn sec" onclick="document.getElementById('archivo').click()"
+                style="width:100%">Elegir archivo</button>
+        <div id="imp-msg" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <div class="t-cab"><h2>Vinculados</h2>
+        <div class="der"><span class="eti gris">${d.dispositivos.length}</span></div>
+      </div>
+      <div class="t-cu">
+        ${d.dispositivos.length === 0
+          ? '<div class="vacio" style="padding:22px">Ninguno todavía.</div>'
+          : d.dispositivos.map(x => `
+            <div class="disp">
+              <div class="ico"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                ${ICONO_DISP[x.tipo] || ICONO_DISP.otro}</svg></div>
+              <div class="tx">
+                <b>${esc(x.nombre)}</b>
+                <span>${x.via === "bluetooth" ? "Bluetooth" : x.via === "archivo" ? "Por archivo" : "Manual"}${
+                  x.ultima_lectura ? " · última lectura " + relativo(x.ultima_lectura) : ""}</span>
+              </div>
+              <button class="btn sec chico" onclick="quitarDispositivo(${x.id})">Quitar</button>
+            </div>`).join("")}
+
+        ${d.resumen.length ? `
+          <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--borde)">
+            <div style="font-size:11.5px; text-transform:uppercase; letter-spacing:.5px;
+                        color:var(--tx3); font-weight:700; margin-bottom:10px">Datos recibidos</div>
+            ${d.resumen.map(r => `
+              <div style="display:flex; justify-content:space-between; font-size:13px;
+                          padding:5px 0; color:var(--tx2)">
+                <span>${esc(NOMBRE_BIO[r.tipo] || r.tipo)}</span>
+                <span><b style="color:var(--tx)">${r.n}</b> · ${relativo(r.ultima)}</span>
+              </div>`).join("")}
+          </div>` : ""}
+      </div>
+    </div>`;
+}
+
+const NOMBRE_BIO = {
+  pulso: "Ritmo cardíaco", presion: "Presión arterial", pasos: "Pasos",
+  calorias: "Calorías", sueno_min: "Sueño", spo2: "Oxígeno en sangre", vo2max: "VO₂ máx"
+};
+
+/**
+ * Conexión directa por Bluetooth.
+ *
+ * Usa el servicio `heart_rate` del estándar Bluetooth, que implementan
+ * la mayoría de las bandas de pecho y pulseras. Al ser un estándar, no
+ * hace falta la API de ninguna marca: ni cuenta de desarrollador, ni
+ * clave, ni aprobación, ni pagarle a nadie.
+ */
+let dispositivoBT = null, ultimoGuardado = 0;
+
+async function conectarBluetooth() {
+  const btn = document.getElementById("btn-bt");
+  btn.disabled = true; btn.textContent = "Buscando…";
+
+  try {
+    const disp = await navigator.bluetooth.requestDevice({
+      filters: [{ services: ["heart_rate"] }],
+      optionalServices: ["battery_service", "device_information"]
+    });
+
+    const servidor = await disp.gatt.connect();
+    const servicio = await servidor.getPrimaryService("heart_rate");
+    const caract = await servicio.getCharacteristic("heart_rate_measurement");
+
+    await caract.startNotifications();
+    caract.addEventListener("characteristicvaluechanged", alLlegarPulso);
+    dispositivoBT = disp;
+
+    disp.addEventListener("gattserverdisconnected", () => {
+      document.getElementById("lectura-viva").innerHTML =
+        `<div class="aviso alerta">Se desconectó ${esc(disp.name || "el dispositivo")}.</div>`;
+      dispositivoBT = null;
+    });
+
+    await api("/salud/dispositivos", { method: "POST", body: {
+      nombre: disp.name || "Sensor de pulso", tipo: "banda_pecho",
+      via: "bluetooth", identificador: disp.id
+    }}).catch(() => {});
+
+    btn.textContent = "Conectado";
+  } catch (err) {
+    btn.disabled = false; btn.textContent = "Buscar dispositivo";
+    // Cancelar el diálogo no es un error que haya que reportar.
+    if (err && err.name === "NotFoundError") return;
+    document.getElementById("lectura-viva").innerHTML =
+      `<div class="aviso mal">No se pudo conectar: ${esc(err.message || "error desconocido")}</div>`;
+  }
+}
+
+/**
+ * Interpreta la lectura según el estándar.
+ *
+ * El primer byte dice si el pulso viene en uno o dos bytes. Asumir
+ * siempre uno funciona hasta que alguien pasa de 255 pulsaciones... o
+ * hasta que un fabricante decide usar dos bytes igual, que pasa seguido.
+ */
+function alLlegarPulso(evento) {
+  const v = evento.target.value;
+  const banderas = v.getUint8(0);
+  const bpm = (banderas & 0x01) ? v.getUint16(1, true) : v.getUint8(1);
+  if (!bpm || bpm < 25 || bpm > 240) return;
+
+  pintarPulso(bpm);
+
+  // Se guarda una lectura por minuto: a una por segundo, una hora de
+  // entrenamiento serían 3600 filas que no aportan nada.
+  const ahora = Date.now();
+  if (ahora - ultimoGuardado > 60000) {
+    ultimoGuardado = ahora;
+    api("/progreso/" + usuario.id + "/biometria", { method: "POST", body: {
+      tipo: "pulso", valor: bpm, origen: "bluetooth",
+      medido_en: new Date().toISOString()
+    }}).catch(() => {});
+  }
+}
+
+function pintarPulso(bpm) {
+  // Zonas sobre la frecuencia máxima estimada (220 menos la edad). Es
+  // una fórmula gruesa y por eso las zonas se muestran anchas.
+  const edad = 30;
+  const fcMax = 220 - edad;
+  const pct = (bpm / fcMax) * 100;
+  const zona = pct < 60 ? 1 : pct < 70 ? 2 : pct < 80 ? 3 : pct < 90 ? 4 : 5;
+  const nombres = ["", "Muy suave", "Suave", "Moderada", "Fuerte", "Máxima"];
+  const colores = ["", "#7d8b99", "#3fb27f", "#4a8ee0", "#d8973c", "#d9534f"];
+
+  document.getElementById("lectura-viva").innerHTML = `
+    <div class="vivo">
+      <div style="font-size:12px; text-transform:uppercase; letter-spacing:1px;
+                  color:var(--tx3); margin-bottom:8px">En vivo</div>
+      <div class="bpm"><span class="latido">♥</span> ${bpm} <small>bpm</small></div>
+      <div style="margin-top:10px; font-size:13.5px; font-weight:650; color:${colores[zona]}">
+        Zona ${zona} · ${nombres[zona]}
+      </div>
+      <div class="zona" style="color:${colores[zona]}">
+        ${[1,2,3,4,5].map(z => `<div class="${z <= zona ? "on" : ""}"></div>`).join("")}
+      </div>
+    </div>`;
+}
+
+async function quitarDispositivo(id) {
+  if (!confirm("¿Quitar este dispositivo?")) return;
+  try { await api("/salud/dispositivos/" + id, { method: "DELETE" }); verDispositivos(); }
+  catch (err) { alert(err.message); }
+}
+
+/* ── Importación ──────────────────────────────────────────────────── */
+
+let porImportar = null;
+
+function revisarArchivo(entrada) {
+  const archivo = entrada.files[0];
+  if (!archivo) return;
+
+  const msg = document.getElementById("imp-msg");
+  msg.innerHTML = `<div class="aviso info">Leyendo ${esc(archivo.name)}…</div>`;
+
+  const lector = new FileReader();
+  lector.onload = async () => {
+    try {
+      const r = await api("/salud/importar/revisar", { method: "POST", body: {
+        nombre: archivo.name, contenido: lector.result
+      }});
+      porImportar = r.lecturas;
+
+      const tipos = Object.entries(r.por_tipo);
+      msg.innerHTML = `
+        <div class="aviso ok">
+          <b>${esc(archivo.name)} · formato ${esc(r.formato)}</b>
+          Se entendieron ${r.total} lecturas${r.actividades ? ` y ${r.actividades} actividades` : ""}.
+        </div>
+        ${tipos.length ? `<div style="margin:12px 0">
+          ${tipos.map(([t, d]) => `
+            <div style="display:flex; justify-content:space-between; font-size:13px; padding:5px 0">
+              <span>${esc(NOMBRE_BIO[t] || t)}</span>
+              <span><b>${d.n}</b> · desde ${fecha(d.desde)}</span>
+            </div>`).join("")}
+        </div>` : ""}
+        ${r.columnas_ignoradas && r.columnas_ignoradas.length ? `
+          <p style="font-size:12px; color:var(--tx3); margin-bottom:12px">
+            Columnas que no se reconocieron y se ignoran:
+            ${r.columnas_ignoradas.map(esc).join(", ")}.
+          </p>` : ""}
+        ${r.total > 0
+          ? `<button class="btn" onclick="confirmarImportar()" style="width:100%">
+               Importar ${r.total} lecturas</button>`
+          : `<div class="aviso alerta">No se encontró ningún dato aprovechable en el archivo.</div>`}`;
+    } catch (err) {
+      msg.innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+    }
+    entrada.value = "";
+  };
+  lector.onerror = () => { msg.innerHTML = `<div class="aviso mal">No se pudo leer el archivo.</div>`; };
+  lector.readAsText(archivo);
+}
+
+async function confirmarImportar() {
+  const msg = document.getElementById("imp-msg");
+  msg.innerHTML = `<div class="aviso info">Importando…</div>`;
+  try {
+    const r = await api("/salud/importar/confirmar", { method: "POST", body: { lecturas: porImportar }});
+    msg.innerHTML = `<div class="aviso ok">
+      <b>Listo</b>
+      ${r.biometria} lecturas y ${r.mediciones} mediciones corporales.
+      ${r.saltadas ? `${r.saltadas} se saltaron por estar repetidas o incompletas.` : ""}
+    </div>`;
+    porImportar = null;
+    cargados.sueno = false;
+  } catch (err) {
+    msg.innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+/* ── Galería ──────────────────────────────────────────────────────── */
+
+async function verFotos() {
+  let fotos;
+  try { fotos = await api("/salud/fotos"); }
+  catch (err) {
+    document.getElementById("p-fotos").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+    return;
+  }
+
+  document.getElementById("p-fotos").innerHTML = `
+    <div class="aviso info" style="margin-bottom:16px">
+      <b>Estas fotos son sólo tuyas</b>
+      No se comparten con ningún grupo ni con nadie más. Sacate la foto siempre en el
+      mismo lugar, con la misma luz y a la misma hora: es lo que hace comparables dos
+      fotos separadas por meses.
+    </div>
+
+    <input type="file" id="foto-archivo" accept="image/*" capture="environment"
+           style="display:none" onchange="subirFoto(this)">
+    <div class="rejilla r-2" style="margin-bottom:16px">
+      <button class="btn" onclick="document.getElementById('foto-archivo').click()">Agregar foto</button>
+      <select id="foto-angulo" style="height:auto">
+        <option value="frente">De frente</option>
+        <option value="perfil">De perfil</option>
+        <option value="espalda">De espalda</option>
+      </select>
+    </div>
+    <div id="foto-msg" style="margin-bottom:16px"></div>
+
+    ${fotos.length === 0
+      ? `<div class="tarjeta"><div class="vacio">
+           Sin fotos todavía.<br>
+           <span style="font-size:13px">La primera es tu punto de partida.</span>
+         </div></div>`
+      : `<div class="rejilla-fotos">
+          ${fotos.map(f => `
+            <div class="foto">
+              <img src="${esc(f.imagen)}" alt="Evolución ${fecha(f.fecha)}" loading="lazy">
+              <button class="quitar" onclick="borrarFoto(${f.id})" title="Borrar">&times;</button>
+              <div class="pie">
+                <b>${fecha(f.fecha)}</b>
+                ${f.peso_kg ? `${f.peso_kg} kg · ` : ""}${esc(f.angulo)}
+              </div>
+            </div>`).join("")}
+        </div>`}`;
+}
+
+/**
+ * Reduce la foto antes de subirla.
+ *
+ * Una foto de teléfono pesa varios megabytes, y ninguno de esos píxeles
+ * sirve para comparar dos siluetas. Se reduce en el navegador: sube más
+ * rápido, ocupa menos y no gasta los datos de nadie.
+ */
+function subirFoto(entrada) {
+  const archivo = entrada.files[0];
+  if (!archivo) return;
+
+  const msg = document.getElementById("foto-msg");
+  msg.innerHTML = `<div class="aviso info">Preparando la foto…</div>`;
+
+  const lector = new FileReader();
+  lector.onload = () => {
+    const img = new Image();
+    img.onload = async () => {
+      const maxLado = 900;
+      const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
+      const lienzo = document.createElement("canvas");
+      lienzo.width = Math.round(img.width * escala);
+      lienzo.height = Math.round(img.height * escala);
+      lienzo.getContext("2d").drawImage(img, 0, 0, lienzo.width, lienzo.height);
+
+      try {
+        await api("/salud/fotos", { method: "POST", body: {
+          imagen: lienzo.toDataURL("image/jpeg", 0.82),
+          angulo: document.getElementById("foto-angulo").value,
+          fecha: hoyISO()
+        }});
+        msg.innerHTML = "";
+        verFotos();
+        mostrarNivel();
+      } catch (err) {
+        msg.innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+      }
+    };
+    img.onerror = () => { msg.innerHTML = `<div class="aviso mal">No se pudo leer la imagen.</div>`; };
+    img.src = lector.result;
+  };
+  lector.readAsDataURL(archivo);
+  entrada.value = "";
+}
+
+async function borrarFoto(id) {
+  if (!confirm("¿Borrar esta foto? No se puede deshacer.")) return;
+  try { await api("/salud/fotos/" + id, { method: "DELETE" }); verFotos(); }
+  catch (err) { alert(err.message); }
+}
+
+/* ── Inicio ───────────────────────────────────────────────────────── */
+
+pintarEstructura("salud");
+verAgua().then(() => { if (agua && agua.recordar) armarRecordatorio(true); });
+cargados.agua = true;
+</script>
+</body>
+</html>
