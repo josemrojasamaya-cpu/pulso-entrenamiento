@@ -6,6 +6,12 @@ const Sesion = {
   guardar(token, usuario) {
     localStorage.setItem("forja_token", token);
     localStorage.setItem("forja_usuario", JSON.stringify(usuario));
+    // Con sesión nueva se vuelve a habilitar el envío: si había series
+    // esperando porque la anterior había vencido, salen ahora.
+    if (window.Almacen) {
+      Almacen.reanudar();
+      Almacen.sincronizar().catch(() => {});
+    }
   },
   token()   { return localStorage.getItem("forja_token"); },
   usuario() {

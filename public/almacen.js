@@ -113,8 +113,43 @@ const Almacen = {
     async sincronizar() {
         if (!navigator.onLine) return { enviadas: 0, motivo: "sin conexión" };
 
+        // Una sola sincronización a la vez.
+        //
+        // Tres cosas la disparan -recuperar conexión, volver a la
+        // aplicación y guardar una serie- y pueden coincidir. Sin este
+        // cerrojo, dos envíos simultáneos mandan el mismo lote; el
+        // servidor no duplica gracias al identificador local, pero es
+        // tráfico inútil desde un teléfono que suele estar con datos
+        // móviles.
+        if (this._sincronizando) return { enviadas: 0, motivo: "ya en curso" };
+
+        // Sin sesión válida no tiene sentido reintentar: cada intento es
+        // otro 401. Antes esto era un bucle que repetía la petición cada
+        // pocos segundos indefinidamente.
+        if (!localStorage.getItem("forja_token")) {
+            return { enviadas: 0, motivo: "sin sesión" };
+        }
+        if (this._sesionRechazada) {
+            return { enviadas: 0, motivo: "la sesión venció; los datos siguen guardados" };
+        }
+
         const cola = await this.pendientes();
         if (cola.length === 0) return { enviadas: 0 };
+
+        this._sincronizando = true;
+        try {
+            return await this._enviar(cola);
+        } finally {
+            this._sincronizando = false;
+        }
+    },
+
+    /** Vuelve a habilitar el envío tras un inicio de sesión nuevo. */
+    reanudar() {
+        this._sesionRechazada = false;
+    },
+
+    async _enviar(cola) {
 
         const lote = cola.map(s => ({
             id_local: s.id_local,
@@ -136,6 +171,13 @@ const Almacen = {
             body: JSON.stringify({ series: lote })
         });
 
+        // Un 401 no se reintenta: la cola queda intacta y el envío se
+        // reanuda cuando la persona vuelva a entrar. Los datos no se
+        // pierden, sólo esperan.
+        if (res.status === 401) {
+            this._sesionRechazada = true;
+            return { enviadas: 0, motivo: "la sesión venció; los datos siguen guardados" };
+        }
         if (!res.ok) throw new Error("El servidor rechazó el envío.");
         const datos = await res.json();
 

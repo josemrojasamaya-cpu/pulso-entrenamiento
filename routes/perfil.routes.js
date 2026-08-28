@@ -2,6 +2,7 @@ const express = require("express");
 const pool = require("../config/db");
 const { requiereSesion, exigirAccesoAtleta } = require("../middleware/auth");
 const { catalogoCondiciones, restricciones } = require("../lib/salud");
+const { catalogoModelos, modeloSugerido, semanaDe, MODELOS } = require("../lib/periodizacion");
 
 const router = express.Router();
 
@@ -316,6 +317,102 @@ router.get("/:id/mediciones/comparar", exigirAccesoAtleta, async (req, res) => {
     } catch (err) {
         console.error("[COMPARAR]", err.message);
         res.status(500).json({ message: "No se pudo comparar." });
+    }
+});
+
+/* ── Mesociclos ───────────────────────────────────────────────────── */
+
+/** Modelos de periodización disponibles. */
+router.get("/periodizacion/modelos", (req, res) => res.json(catalogoModelos()));
+
+/** Bloque activo, con la semana en la que cae hoy. */
+router.get("/:id/mesociclo", exigirAccesoAtleta, async (req, res) => {
+    try {
+        const [meso, perfil] = await Promise.all([
+            pool.query("SELECT * FROM mesociclos WHERE usuario_id = $1 AND activo LIMIT 1", [req.atletaId]),
+            pool.query("SELECT objetivo, nivel FROM perfiles WHERE usuario_id = $1", [req.atletaId])
+        ]);
+
+        const p = perfil.rows[0] || {};
+        const hoy = new Date().toISOString().slice(0, 10);
+
+        res.json({
+            mesociclo: meso.rows[0] || null,
+            semana: meso.rows[0] ? semanaDe(meso.rows[0], hoy) : null,
+            sugerido: modeloSugerido(p.objetivo, p.nivel),
+            modelos: catalogoModelos()
+        });
+    } catch (err) {
+        console.error("[MESOCICLO] leer:", err.message);
+        res.status(500).json({ message: "No se pudo leer el bloque." });
+    }
+});
+
+/**
+ * Inicia un bloque nuevo.
+ *
+ * El anterior se archiva en vez de borrarse: forma parte del historial de
+ * la persona, y saber qué modelo siguió cuando progresó es justamente lo
+ * que permite repetirlo.
+ */
+router.post("/:id/mesociclo", exigirAccesoAtleta, async (req, res) => {
+    const b = req.body || {};
+    const modelo = String(b.modelo || "");
+
+    if (!MODELOS[modelo]) {
+        return res.status(400).json({
+            message: `Modelo no reconocido. Opciones: ${Object.keys(MODELOS).join(", ")}.`
+        });
+    }
+
+    const inicio = b.inicio && /^\d{4}-\d{2}-\d{2}$/.test(b.inicio)
+        ? b.inicio : new Date().toISOString().slice(0, 10);
+
+    const cliente = await pool.connect();
+    try {
+        await cliente.query("BEGIN");
+        await cliente.query(
+            "UPDATE mesociclos SET activo = FALSE WHERE usuario_id = $1 AND activo",
+            [req.atletaId]
+        );
+        const r = await cliente.query(
+            `INSERT INTO mesociclos (usuario_id, nombre, modelo, inicio)
+             VALUES ($1,$2,$3,$4::date) RETURNING *`,
+            [req.atletaId,
+             (b.nombre || MODELOS[modelo].nombre).slice(0, 120),
+             modelo, inicio]
+        );
+        await cliente.query("COMMIT");
+
+        // El plan futuro se rehace: las semanas del bloque nuevo cambian
+        // volumen e intensidad desde mañana.
+        const rehechas = await descartarPlanFuturo(req.atletaId);
+
+        res.status(201).json({
+            mesociclo: r.rows[0],
+            semana: semanaDe(r.rows[0], new Date().toISOString().slice(0, 10)),
+            rutinas_rehechas: rehechas
+        });
+    } catch (err) {
+        await cliente.query("ROLLBACK").catch(() => {});
+        console.error("[MESOCICLO] crear:", err.message);
+        res.status(500).json({ message: "No se pudo iniciar el bloque." });
+    } finally {
+        cliente.release();
+    }
+});
+
+/** Cierra el bloque activo. */
+router.delete("/:id/mesociclo", exigirAccesoAtleta, async (req, res) => {
+    try {
+        await pool.query(
+            "UPDATE mesociclos SET activo = FALSE WHERE usuario_id = $1 AND activo",
+            [req.atletaId]
+        );
+        const rehechas = await descartarPlanFuturo(req.atletaId);
+        res.json({ ok: true, rutinas_rehechas: rehechas });
+    } catch (err) {
+        res.status(500).json({ message: "No se pudo cerrar el bloque." });
     }
 });
 

@@ -63,6 +63,14 @@ const { restricciones, esApto, CONDICIONES } = require("../lib/salud");
     const token = await login("atleta");
     const id = (await pedir("/api/yo", token)).d.usuario.id;
 
+    // Punto de partida conocido.
+    //
+    // Sin esto, la suite dependía de lo que hubiera dejado la corrida
+    // anterior: fallaba la primera vez y pasaba la segunda. Una prueba
+    // que depende de su propio historial no sirve para decidir nada.
+    await pedir(`/api/atleta/${id}/mesociclo`, token, { method: "DELETE" });
+    await pedir(`/api/atleta/${id}/condiciones`, token, { method: "PUT", body: { condiciones: [] } });
+
     const ponerCondiciones = async (lista) => {
         await pedir(`/api/atleta/${id}/condiciones`, token, {
             method: "PUT", body: { condiciones: lista }

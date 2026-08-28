@@ -61,6 +61,7 @@ async function cargar() {
     condicionesActivas = (datos.condiciones || []).map(c => c.codigo);
     catalogoCond = catalogo;
     pintar(datos.limites);
+    cargarBloque();
   } catch (err) {
     document.getElementById("contenido").innerHTML =
       `<div class="aviso ${err.sinRed ? "alerta" : "mal"}">${esc(err.message)}</div>`;
@@ -139,6 +140,27 @@ function pintar(limites) {
 
       <button class="btn grande" onclick="guardarPerfil()">Guardar perfil</button>
       <div id="msg-perfil" style="margin-top:12px"></div>
+    </div></div>
+
+    <div class="tarjeta" style="margin-bottom:16px"><div class="t-cu">
+      <div class="seccion">
+        <h2>Bloque de entrenamiento</h2>
+        <p class="ayuda">
+          Entrenar siempre igual deja de funcionar: el cuerpo se adapta a lo que se
+          repite. Un bloque organiza el esfuerzo en semanas que suben y una que baja
+          —la descarga—, que es cuando el cuerpo asimila lo anterior.
+        </p>
+        <div id="bloque-actual"></div>
+        <label class="campo" style="margin-top:14px"><span>Modelo</span>
+          <select id="p-modelo"></select>
+        </label>
+        <div id="modelo-desc" style="font-size:12.5px; color:var(--tx2); line-height:1.55; margin-bottom:14px"></div>
+        <div style="display:flex; gap:9px">
+          <button class="btn" onclick="iniciarBloque()" style="flex:1">Iniciar bloque</button>
+          <button class="btn sec" id="btn-cerrar-bloque" onclick="cerrarBloque()" style="display:none">Cerrar</button>
+        </div>
+        <div id="msg-bloque" style="margin-top:12px"></div>
+      </div>
     </div></div>
 
     <div class="tarjeta"><div class="t-cu">
@@ -234,6 +256,81 @@ async function guardarCondiciones() {
       `<div class="aviso ok">Condiciones guardadas. Los ejercicios contraindicados dejan de aparecer desde la próxima rutina.</div>`;
   } catch (err) {
     document.getElementById("msg-cond").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+/* ── Bloque de entrenamiento ──────────────────────────────────────── */
+
+let modelos = [];
+
+async function cargarBloque() {
+  try {
+    const d = await api(`/atleta/${usuario.id}/mesociclo`);
+    modelos = d.modelos || [];
+    const elegido = d.mesociclo ? d.mesociclo.modelo : d.sugerido;
+
+    const sel = document.getElementById("p-modelo");
+    sel.innerHTML = modelos.map(m => `
+      <option value="${m.codigo}" ${m.codigo === elegido ? "selected" : ""}>
+        ${esc(m.nombre)} · ${m.semanas} semana${m.semanas > 1 ? "s" : ""}${
+          m.codigo === d.sugerido ? " (recomendado para vos)" : ""}
+      </option>`).join("");
+    sel.onchange = pintarDescripcion;
+    pintarDescripcion();
+
+    document.getElementById("btn-cerrar-bloque").style.display = d.mesociclo ? "" : "none";
+    const caja = document.getElementById("bloque-actual");
+
+    if (!d.mesociclo || !d.semana) {
+      caja.innerHTML = `<div class="aviso info">
+        No tenés ningún bloque activo. Las sesiones salen sin variación semanal.
+      </div>`;
+      return;
+    }
+
+    const s = d.semana;
+    caja.innerHTML = `
+      <div class="aviso ${s.descarga ? "alerta" : "info"}">
+        <b>${esc(d.mesociclo.nombre)} · semana ${s.numero} de ${s.de}${
+          s.ciclo > 1 ? ` (ciclo ${s.ciclo})` : ""}</b>
+        ${esc(s.nota)}
+        <div style="margin-top:7px; font-size:12.5px; opacity:.85">
+          Volumen ${Math.round(s.volumen * 100)}% · intensidad ${Math.round(s.intensidad * 100)}%
+        </div>
+      </div>`;
+  } catch (err) {
+    document.getElementById("bloque-actual").innerHTML =
+      `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+function pintarDescripcion() {
+  const m = modelos.find(x => x.codigo === document.getElementById("p-modelo").value);
+  document.getElementById("modelo-desc").textContent = m ? m.descripcion : "";
+}
+
+async function iniciarBloque() {
+  try {
+    const r = await api(`/atleta/${usuario.id}/mesociclo`, {
+      method: "POST", body: { modelo: document.getElementById("p-modelo").value }
+    });
+    document.getElementById("msg-bloque").innerHTML =
+      `<div class="aviso ok">Bloque iniciado.${
+        r.rutinas_rehechas ? ` Se rehará el plan de los próximos ${r.rutinas_rehechas} día(s).` : ""}</div>`;
+    cargarBloque();
+  } catch (err) {
+    document.getElementById("msg-bloque").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+async function cerrarBloque() {
+  if (!confirm("¿Cerrar el bloque actual? Las sesiones vuelven a salir sin variación semanal.")) return;
+  try {
+    await api(`/atleta/${usuario.id}/mesociclo`, { method: "DELETE" });
+    document.getElementById("msg-bloque").innerHTML = `<div class="aviso ok">Bloque cerrado.</div>`;
+    cargarBloque();
+  } catch (err) {
+    document.getElementById("msg-bloque").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
   }
 }
 

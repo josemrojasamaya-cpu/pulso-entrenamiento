@@ -1,9 +1,10 @@
 const express = require("express");
 const pool = require("../config/db");
 const { requiereSesion, puedeVerAtleta } = require("../middleware/auth");
-const { generar } = require("../lib/motor-rutinas");
+const { generar, estimarMinutos } = require("../lib/motor-rutinas");
 const { estimar1RM } = require("../lib/progresion");
 const { restricciones, esApto } = require("../lib/salud");
+const { semanaDe, aplicar: aplicarPeriodizacion } = require("../lib/periodizacion");
 const { enlaceVideo } = require("../db/ejercicios");
 
 const router = express.Router();
@@ -41,7 +42,7 @@ function hoyISO(desplazamientoDias = 0) {
  * criterios distintos.
  */
 async function reunirContexto(usuarioId) {
-    const [perfil, condiciones, catalogo, recientes, sesiones] = await Promise.all([
+    const [perfil, condiciones, catalogo, recientes, sesiones, meso] = await Promise.all([
         pool.query("SELECT * FROM perfiles WHERE usuario_id = $1", [usuarioId]),
         pool.query("SELECT codigo, severidad FROM condiciones WHERE usuario_id = $1 AND activa", [usuarioId]),
         pool.query("SELECT * FROM ejercicios WHERE activo ORDER BY id"),
@@ -54,6 +55,10 @@ async function reunirContexto(usuarioId) {
         ),
         pool.query(
             "SELECT COUNT(*)::int n FROM rutinas WHERE usuario_id = $1 AND estado = 'completada'",
+            [usuarioId]
+        ),
+        pool.query(
+            "SELECT * FROM mesociclos WHERE usuario_id = $1 AND activo LIMIT 1",
             [usuarioId]
         )
     ]);
@@ -86,7 +91,8 @@ async function reunirContexto(usuarioId) {
         catalogo: catalogo.rows,
         historial,
         ejerciciosRecientes: recientes.rows.map(r => r.ejercicio_id),
-        sesionIndice: sesiones.rows[0].n
+        sesionIndice: sesiones.rows[0].n,
+        mesociclo: meso.rows[0] || null
     };
 }
 
@@ -175,6 +181,53 @@ async function revalidar(usuarioId, rutina) {
         valida: inapto.length === 0 && descansoCorto.length === 0 && repsBajas.length === 0,
         inapto, descansoCorto, repsBajas, codigos, limites
     };
+}
+
+/**
+ * Arma el plan del día y le aplica la periodización del bloque activo.
+ *
+ * Va en una función porque lo usan la ruta del día y la del paquete: si
+ * cada una lo hiciera por su cuenta, la rutina descargada por
+ * adelantado podría no coincidir con la que se sirve al abrirla.
+ */
+function planDelDia(ctx, fecha, usuarioId, sesionIndice) {
+    const plan = generar({
+        perfil: ctx.perfil,
+        condiciones: ctx.condiciones,
+        severidades: ctx.severidades,
+        catalogo: ctx.catalogo,
+        fecha,
+        usuarioId,
+        historial: ctx.historial,
+        sesionIndice,
+        ejerciciosRecientes: ctx.ejerciciosRecientes
+    });
+
+    if (plan.error) return plan;
+
+    const semana = ctx.mesociclo ? semanaDe(ctx.mesociclo, fecha) : null;
+    if (!semana) return plan;
+
+    const limites = restricciones(ctx.severidades && ctx.severidades.length
+        ? ctx.severidades : ctx.condiciones);
+
+    const periodizado = aplicarPeriodizacion(plan, semana, limites.intensidadMax);
+
+    // La periodización no puede pasar por encima del tope de salud: sube
+    // el peso un porcentaje, y ese porcentaje podría superar el máximo
+    // que las condiciones de la persona permiten.
+    for (const e of periodizado.ejercicios) {
+        if (!e.peso_sugerido_kg || !e.confianzaRM) continue;
+        const tope = e.confianzaRM * limites.intensidadMax;
+        if (e.peso_sugerido_kg > tope) e.peso_sugerido_kg = Math.floor(tope * 2) / 2;
+    }
+
+    periodizado.minutos_estimados = estimarMinutos(periodizado.ejercicios);
+    periodizado.justificacion = {
+        ...periodizado.justificacion,
+        periodizacion: periodizado.periodizacion
+    };
+    return periodizado;
 }
 
 /** Borra una rutina para que se vuelva a generar con los datos de hoy. */
@@ -345,18 +398,7 @@ router.get("/dia/:fecha", async (req, res) => {
             });
         }
 
-        const plan = generar({
-            perfil: ctx.perfil,
-            condiciones: ctx.condiciones,
-            severidades: ctx.severidades,
-            catalogo: ctx.catalogo,
-            fecha,
-            usuarioId,
-            historial: ctx.historial,
-            sesionIndice: ctx.sesionIndice,
-            ejerciciosRecientes: ctx.ejerciciosRecientes
-        });
-
+        const plan = planDelDia(ctx, fecha, usuarioId, ctx.sesionIndice);
         if (plan.error) return res.status(409).json(plan);
 
         await persistir(usuarioId, fecha, plan);
@@ -399,13 +441,7 @@ router.get("/paquete", async (req, res) => {
             const fecha = hoyISO(i);
             let r = await leerRutina(usuarioId, fecha);
             if (!r) {
-                const plan = generar({
-                    perfil: ctx.perfil, condiciones: ctx.condiciones,
-                    severidades: ctx.severidades, catalogo: ctx.catalogo,
-                    fecha, usuarioId, historial: ctx.historial,
-                    sesionIndice: ctx.sesionIndice + i,
-                    ejerciciosRecientes: ctx.ejerciciosRecientes
-                });
+                const plan = planDelDia(ctx, fecha, usuarioId, ctx.sesionIndice + i);
                 if (plan.error) continue;
                 await persistir(usuarioId, fecha, plan);
                 r = await leerRutina(usuarioId, fecha);

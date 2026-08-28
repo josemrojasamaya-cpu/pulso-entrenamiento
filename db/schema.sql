@@ -325,3 +325,34 @@ CREATE TABLE IF NOT EXISTS puntos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pts_usuario ON puntos (usuario_id, fecha DESC);
+
+
+-- ---------------------------------------------------------------------
+--  Mesociclos · planificación en bloques
+--
+--  Entrenar siempre igual deja de funcionar: el cuerpo se adapta a lo
+--  que se repite. Un mesociclo organiza el esfuerzo en tres a cinco
+--  semanas de carga creciente más una de descarga, que es cuando el
+--  cuerpo asimila lo anterior.
+--
+--  Sólo se guarda el inicio y el modelo: en qué semana cae cada día se
+--  CALCULA. Guardar la semana actual obligaría a un proceso que la
+--  avance, y ese proceso se cae, se olvida o se ejecuta dos veces.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS mesociclos (
+    id          SERIAL PRIMARY KEY,
+    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    nombre      VARCHAR(120) NOT NULL,
+    modelo      VARCHAR(30)  NOT NULL DEFAULT 'plano',
+        -- volumen_creciente | intensidad_creciente | ondulante | plano
+    inicio      DATE    NOT NULL DEFAULT CURRENT_DATE,
+    activo      BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_meso_usuario ON mesociclos (usuario_id, activo);
+
+-- Un solo bloque activo por persona: dos planes a la vez no significan
+-- nada, y el motor tendría que elegir uno arbitrariamente.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_meso_unico_activo
+    ON mesociclos (usuario_id) WHERE activo;

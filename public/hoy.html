@@ -85,6 +85,21 @@
 .descanso .acciones{display:flex; gap:10px}
 
 .avisos-salud{margin-bottom:16px}
+.bloque{
+  display:flex; align-items:center; gap:13px;
+  background:var(--gr-850); border:1px solid var(--borde);
+  border-radius:var(--radio); padding:13px 16px; margin-bottom:14px;
+}
+.bloque.descarga{background:var(--alerta-tenue); border-color:#4a3a1c}
+.bloque .sem{display:flex; gap:4px; flex:none}
+.bloque .sem i{width:9px; height:26px; border-radius:3px; display:block; background:var(--gr-700)}
+.bloque .sem i.pasada{background:var(--az-3)}
+.bloque .sem i.actual{background:var(--az)}
+.bloque .sem i.deload{background:var(--alerta)}
+.bloque .tx{flex:1; min-width:0}
+.bloque .tx b{display:block; font-size:13.5px; font-weight:650}
+.bloque .tx span{font-size:12px; color:var(--tx2); line-height:1.45; display:block; margin-top:2px}
+
 .porque{
   font-size:12.5px; color:var(--tx3); line-height:1.6;
   background:var(--gr-850); border:1px solid var(--borde);
@@ -195,6 +210,9 @@ function pintar(avisos = []) {
       </div>
     </div>
 
+    ${rutina.justificacion && rutina.justificacion.periodizacion
+        ? pintarBloque(rutina.justificacion.periodizacion) : ""}
+
     ${avisos && avisos.length ? `
       <div class="avisos-salud">
         ${avisos.map(a => `<div class="aviso alerta">
@@ -212,6 +230,33 @@ function pintar(avisos = []) {
             style="margin-top:18px" onclick="terminar()" ${completada ? "disabled" : ""}>
       ${completada ? "Sesión completada" : "Terminar sesión"}
     </button>`;
+}
+
+/**
+ * La semana del bloque, con las semanas dibujadas como barras.
+ *
+ * Va arriba de todo porque explica por qué hoy hay más series que la
+ * semana pasada, o por qué de golpe hay muchas menos. Sin esta franja, la
+ * semana de descarga parece un error del sistema y la gente la ignora,
+ * que es justamente lo que arruina el bloque.
+ */
+function pintarBloque(p) {
+  const barras = Array.from({ length: p.de }, (_, i) => {
+    const n = i + 1;
+    const clase = n === p.semana ? (p.descarga ? "deload" : "actual")
+                : n < p.semana ? "pasada" : "";
+    return `<i class="${clase}"></i>`;
+  }).join("");
+
+  return `
+    <div class="bloque ${p.descarga ? "descarga" : ""}">
+      <div class="sem">${barras}</div>
+      <div class="tx">
+        <b>Semana ${p.semana} de ${p.de}${p.descarga ? " · descarga" : ""}</b>
+        <span>${esc(p.nota)}</span>
+      </div>
+      <span class="eti ${p.descarga ? "alerta" : "azul"}">${p.volumen_pct}% vol</span>
+    </div>`;
 }
 
 function pintarEjercicio(e, i) {
