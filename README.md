@@ -96,7 +96,29 @@ La comparación entre dos tomas sabe qué significa cada cambio: bajar grasa
 o cintura se muestra como logro, perder bíceps como pérdida, y el peso en
 gris, porque subir o bajar no es bueno ni malo por sí mismo.
 
-### 6. Ranking por constancia, no por kilos
+### 6. Planificación en bloques
+
+Entrenar siempre igual deja de funcionar: el cuerpo se adapta a lo que se
+repite. Un **mesociclo** organiza el esfuerzo en tres a cinco semanas de
+carga creciente más una de **descarga** —que no es tiempo perdido, es
+cuando el cuerpo asimila lo anterior, y es lo primero que la gente se
+salta y por lo que después se estanca.
+
+Cuatro modelos: volumen creciente, intensidad creciente, ondulante y
+plano. A un principiante se le sugiere **no periodizar**: progresa sesión
+a sesión, y la periodización resuelve un problema que todavía no tiene.
+
+Sólo se guardan el inicio y el modelo; en qué semana cae cada día **se
+calcula**. Guardar "la semana actual" obligaría a un proceso que la
+avance, y ese proceso se cae, se olvida o se ejecuta dos veces. Al
+terminar el bloque, se encadena solo con el ciclo siguiente.
+
+La franja de la semana se muestra arriba de la rutina porque explica por
+qué hoy hay más series que la semana pasada, o por qué de golpe hay muchas
+menos. Sin esa explicación, la semana de descarga parece un error del
+sistema y la gente la ignora.
+
+### 7. Ranking por constancia, no por kilos
 
 Un ranking por peso levantado lo gana siempre quien lleva diez años
 entrenando; quien empieza no tiene ninguna posibilidad y abandona. Los
@@ -133,11 +155,11 @@ catálogo y los datos de ejemplo solo. En planes sin acceso a consola es la
 ## Pruebas
 
 ```bash
-node pruebas/motor.js                                    # 46, sin base de datos
+node pruebas/motor.js                                    # 62, sin base de datos
 URL_BASE=http://localhost:3000 node pruebas/api.js       # 17, contra el servidor vivo
 ```
 
-**63 comprobaciones**, y la historia de por qué son dos suites vale más que
+**79 comprobaciones**, y la historia de por qué son dos suites vale más que
 el número.
 
 `motor.js` prueba el generador en memoria: seguridad clínica,

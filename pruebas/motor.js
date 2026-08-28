@@ -342,6 +342,76 @@ seccion("JUSTIFICACIÓN: el motor explica lo que decidió");
     check("entrega los avisos de seguridad", plan.avisos.length >= 3);
 }
 
+seccion("PERIODIZACIÓN: bloques de varias semanas");
+{
+    const { semanaDe, aplicar, modeloSugerido, MODELOS } = require("../lib/periodizacion");
+
+    const meso = { inicio: "2026-08-03", modelo: "volumen_creciente" };
+    const s1 = semanaDe(meso, "2026-08-03");
+    const s3 = semanaDe(meso, "2026-08-17");
+    const s4 = semanaDe(meso, "2026-08-24");
+    const s5 = semanaDe(meso, "2026-08-31");
+
+    check("la primera semana es la 1", s1.numero === 1 && s1.ciclo === 1);
+    check("el volumen sube hacia el final del bloque", s3.volumen > s1.volumen);
+    check("la última semana es descarga", s4.descarga === true && s4.volumen < s1.volumen);
+    check("al terminar, el bloque se encadena solo",
+          s5.numero === 1 && s5.ciclo === 2, JSON.stringify(s5));
+
+    // node-postgres devuelve las columnas DATE como objetos Date. Si el
+    // cálculo no lo contempla, devuelve null en silencio y la
+    // periodización deja de aplicarse sin ningún error visible.
+    const conDate = semanaDe({ inicio: new Date(2026, 7, 3), modelo: "volumen_creciente" }, "2026-08-17");
+    check("acepta la fecha como objeto Date, no sólo como texto",
+          conDate !== null && conDate.numero === s3.numero,
+          conDate ? `dio semana ${conDate.numero}` : "dio null");
+
+    check("una fecha anterior al inicio no cae en ninguna semana",
+          semanaDe(meso, "2026-07-30") === null);
+    check("un modelo desconocido no rompe",
+          semanaDe({ inicio: "2026-08-03", modelo: "inventado" }, "2026-08-10") !== null);
+
+    // Aplicación sobre un plan
+    const plan = {
+        ejercicios: [
+            { series: 4, peso_sugerido_kg: 60, rep_min: 8, rep_max: 12 },
+            { series: 3, peso_sugerido_kg: 20, rep_min: 8, rep_max: 12 }
+        ]
+    };
+    const alta = aplicar(plan, s3, 1.0);
+    const baja = aplicar(plan, s4, 1.0);
+
+    check("en la semana dura suben las series",
+          alta.ejercicios[0].series > plan.ejercicios[0].series,
+          `${plan.ejercicios[0].series} → ${alta.ejercicios[0].series}`);
+    check("en la descarga bajan series y peso",
+          baja.ejercicios[0].series < plan.ejercicios[0].series &&
+          baja.ejercicios[0].peso_sugerido_kg < plan.ejercicios[0].peso_sugerido_kg);
+    check("las series nunca bajan de una",
+          aplicar({ ejercicios: [{ series: 1, peso_sugerido_kg: 10 }] }, s4, 1.0)
+              .ejercicios[0].series >= 1);
+    check("las series nunca pasan de seis",
+          aplicar({ ejercicios: [{ series: 6, peso_sugerido_kg: 10 }] }, s3, 1.0)
+              .ejercicios[0].series <= 6);
+    check("no altera el plan original",
+          plan.ejercicios[0].series === 4 && plan.ejercicios[0].peso_sugerido_kg === 60);
+    check("informa la semana en la salida",
+          alta.periodizacion && alta.periodizacion.semana === 3 && alta.periodizacion.de === 4);
+
+    check("a un principiante se le sugiere no periodizar",
+          modeloSugerido("fuerza", "principiante") === "plano");
+    check("a alguien de fuerza avanzado se le sugiere intensidad creciente",
+          modeloSugerido("fuerza", "avanzado") === "intensidad_creciente");
+
+    // Todo modelo con más de una semana tiene que traer descarga: un
+    // bloque que sólo sube lleva al agotamiento, no al progreso.
+    const sinDescarga = Object.entries(MODELOS)
+        .filter(([, m]) => m.semanas.length > 1 && !m.semanas.some(s => s.descarga))
+        .map(([c]) => c);
+    check("todo bloque de varias semanas incluye una descarga",
+          sinDescarga.length === 0, sinDescarga.join(", "));
+}
+
 console.log(`\n=================================`);
 console.log(`  ${ok} pasaron · ${fallo} fallaron`);
 console.log(`=================================`);
