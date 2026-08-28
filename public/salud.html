@@ -90,6 +90,42 @@
 .zona div{flex:1; height:7px; border-radius:3px; background:var(--gr-750)}
 .zona div.on{background:currentColor}
 
+/* Aplicaciones */
+.app-f{
+  border:1px solid var(--borde); border-radius:13px; background:var(--gr-850);
+  margin-bottom:10px; overflow:hidden;
+}
+.app-cab{
+  display:flex; align-items:center; gap:12px; padding:14px 15px; cursor:pointer;
+  user-select:none; transition:.15s;
+}
+.app-cab:hover{background:var(--gr-800)}
+.app-cab .letra{
+  width:40px; height:40px; border-radius:11px; flex:none; display:grid; place-items:center;
+  background:var(--az-tenue); color:var(--az); font-weight:800; font-size:16px;
+  border:1px solid var(--az-3);
+}
+.app-cab .tx{flex:1; min-width:0}
+.app-cab .tx b{display:block; font-size:14.5px; font-weight:650}
+.app-cab .tx span{font-size:11.5px; color:var(--tx3); display:block;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.app-cab .fl{color:var(--tx3); font-size:12px; transition:transform .2s}
+.app-f.abierta .app-cab .fl{transform:rotate(90deg)}
+.app-cu{display:none; padding:0 15px 16px; border-top:1px solid var(--borde)}
+.app-f.abierta .app-cu{display:block}
+.app-cu ol{margin:12px 0 0 18px; padding:0; font-size:13px; line-height:1.7; color:var(--tx2)}
+.app-cu ol li{margin-bottom:5px}
+.etq-bt{
+  display:inline-block; padding:2px 7px; border-radius:5px; font-size:10px; font-weight:700;
+  background:var(--az-tenue); color:var(--az); border:1px solid var(--az-3); margin-left:6px;
+  vertical-align:middle;
+}
+.trae{display:flex; flex-wrap:wrap; gap:5px; margin-top:12px}
+.trae span{
+  font-size:11px; padding:3px 9px; border-radius:20px;
+  background:var(--gr-750); color:var(--tx2); border:1px solid var(--borde);
+}
+
 /* Galería */
 .rejilla-fotos{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px}
 .foto{position:relative; border-radius:11px; overflow:hidden; background:var(--gr-850);
@@ -121,12 +157,14 @@
     <button class="on" onclick="verPanel('agua', this)">Agua</button>
     <button onclick="verPanel('sueno', this)">Sueño</button>
     <button onclick="verPanel('dispositivos', this)">Dispositivos</button>
+    <button onclick="verPanel('apps', this)">Apps</button>
     <button onclick="verPanel('fotos', this)">Galería</button>
   </div>
 
   <div class="panel-s on" id="p-agua"><div class="cargando">Cargando…</div></div>
   <div class="panel-s" id="p-sueno"></div>
   <div class="panel-s" id="p-dispositivos"></div>
+  <div class="panel-s" id="p-apps"></div>
   <div class="panel-s" id="p-fotos"></div>
 </main>
 
@@ -150,6 +188,7 @@ function cargar(cual) {
   if (cual === "agua") verAgua();
   if (cual === "sueno") verSueno();
   if (cual === "dispositivos") verDispositivos();
+  if (cual === "apps") verApps();
   if (cual === "fotos") verFotos();
 }
 
@@ -213,18 +252,13 @@ async function verAgua() {
     </div>
 
     <div class="tarjeta">
-      <div class="t-cab"><h2>Recordatorios</h2></div>
+      <div class="t-cab"><h2>Tu meta</h2></div>
       <div class="t-cu">
         <p style="font-size:13px; color:var(--tx2); line-height:1.55; margin-bottom:14px">
-          Un aviso cada tanto mientras tengas la aplicación abierta. No se envía nada
-          a ningún servidor: la notificación sale de tu propio teléfono.
+          Cuando llegás a tu meta del día ganás <strong style="color:var(--ac)">20 puntos</strong>,
+          una sola vez. Los puntos se dan por cumplir, no por tocar el botón.
         </p>
-        <label class="ficha ${agua.recordar ? "on" : ""}" style="width:100%; justify-content:center">
-          <input type="checkbox" id="rec-agua" ${agua.recordar ? "checked" : ""}
-                 onchange="cambiarRecordatorio(this)">
-          Recordarme tomar agua
-        </label>
-        <div class="rejilla r-2" style="margin-top:14px">
+        <div class="rejilla r-2">
           <label class="campo"><span>Meta diaria (ml)</span>
             <input type="number" id="meta-agua" value="${agua.meta}" step="100" min="500" max="8000"></label>
           <label class="campo"><span>Tu vaso (ml)</span>
@@ -232,6 +266,7 @@ async function verAgua() {
         </div>
         <button class="btn sec" onclick="guardarAgua()" style="width:100%">Guardar</button>
         <div id="agua-msg" style="margin-top:10px"></div>
+        <div id="agua-premio" style="margin-top:10px"></div>
       </div>
     </div>`;
 }
@@ -241,8 +276,14 @@ async function tomar(ml) {
     const r = await api("/salud/agua", { method: "POST", body: { ml } });
     agua.hoy = r.hoy; agua.veces++;
     agua.porcentaje = Math.min(100, Math.round((r.hoy / agua.meta) * 100));
-    verAgua();
+    await verAgua();
     if (navigator.vibrate) navigator.vibrate(35);
+
+    if (r.puntos_ganados) {
+      const c = document.getElementById("agua-premio");
+      if (c) c.innerHTML =
+        `<div class="aviso ok">Meta cumplida. +${r.puntos_ganados} puntos.</div>`;
+    }
   } catch (err) { alert(err.message); }
 }
 
@@ -264,50 +305,85 @@ async function guardarAgua() {
   }
 }
 
+/* Los recordatorios viven en avisos.js: un solo aviso al día, y sólo si
+   la persona lo pidió. La versión anterior mandaba una notificación de
+   agua cada noventa minutos, y ese es exactamente el camino por el que
+   una aplicación termina desinstalada. */
+
+/* ── Aplicaciones que se pueden traer ─────────────────────────────── */
+
 /**
- * Recordatorios de hidratación.
- *
- * Salen del propio teléfono con la API de notificaciones del navegador:
- * no hay servidor de envío ni servicio de terceros. La contrapartida es
- * que sólo suenan mientras la aplicación esté abierta o en segundo
- * plano, y eso se dice en pantalla en vez de prometer de más.
+ * El catálogo no pregunta qué tenés instalado: no hay forma de saberlo
+ * desde el navegador, y fingir que sí la hay sería mentira. Se muestran
+ * todas, y quien usa una la reconoce de inmediato. Las que no usa le
+ * quedan como enlace por si le interesan.
  */
-let temporizadorAgua = null;
+async function verApps() {
+  const c = document.getElementById("p-apps");
+  let d;
+  try { d = await api("/salud/aplicaciones"); }
+  catch (err) { c.innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`; return; }
 
-async function cambiarRecordatorio(caja) {
-  caja.closest(".ficha").classList.toggle("on", caja.checked);
+  c.innerHTML = `
+    <div class="tarjeta" style="margin-bottom:16px"><div class="t-cu">
+      <h3 style="font-size:15px; margin-bottom:8px">Traé tus datos de donde ya los tenés</h3>
+      <p style="font-size:13px; color:var(--tx2); line-height:1.6">
+        Tus datos son tuyos, y todas estas plataformas están obligadas a dejarte
+        bajarlos. Acá abajo están los pasos exactos de cada una: dónde está el
+        botón de exportar, qué archivo sale y qué se aprovecha.
+      </p>
+      <p style="font-size:12.5px; color:var(--tx3); line-height:1.6; margin-top:10px">
+        No pedimos tu contraseña de ninguna de ellas y no nos conectamos a sus
+        servidores. Vos bajás el archivo y lo subís acá.
+      </p>
+      <a class="btn sec" href="#" onclick="verPanel('dispositivos', document.querySelectorAll('.solapas-s button')[2]); return false"
+         style="display:block; text-align:center; margin-top:14px">Ir a subir un archivo</a>
+    </div></div>
 
-  if (caja.checked && "Notification" in window) {
-    const permiso = await Notification.requestPermission();
-    if (permiso !== "granted") {
-      caja.checked = false;
-      caja.closest(".ficha").classList.remove("on");
-      alert("Sin permiso de notificaciones no se pueden mandar recordatorios. " +
-            "Podés activarlo desde los ajustes del navegador.");
-      return;
-    }
-  }
+    ${d.aplicaciones.map((a, i) => `
+      <div class="app-f" id="app-${a.codigo}">
+        <div class="app-cab" onclick="document.getElementById('app-${a.codigo}').classList.toggle('abierta')">
+          <div class="letra">${esc(a.nombre.charAt(0))}</div>
+          <div class="tx">
+            <b>${esc(a.nombre)}${a.bluetooth ? '<span class="etq-bt">BLUETOOTH</span>' : ''}</b>
+            <span>${esc(a.que_es)}</span>
+          </div>
+          <div class="fl">&#9654;</div>
+        </div>
+        <div class="app-cu">
+          <div class="trae">${a.trae.map(t => `<span>${esc(t)}</span>`).join("")}</div>
 
-  await api("/salud/agua/preferencias", { method: "PUT",
-    body: { recordar_agua: caja.checked } }).catch(() => {});
-  armarRecordatorio(caja.checked);
-}
+          <p style="font-size:12px; color:var(--tx3); margin-top:14px">
+            <strong style="color:var(--tx2)">Sale en:</strong> ${esc(a.formato)}
+            &nbsp;·&nbsp; <strong style="color:var(--tx2)">Está en:</strong> ${esc(a.seccion)}
+          </p>
 
-function armarRecordatorio(activo) {
-  clearInterval(temporizadorAgua);
-  if (!activo) return;
+          <ol>${a.pasos.map(x => `<li>${esc(x)}</li>`).join("")}</ol>
 
-  const cada = (agua && agua.cada_min ? agua.cada_min : 90) * 60 * 1000;
-  temporizadorAgua = setInterval(() => {
-    if (Notification.permission !== "granted") return;
-    // No se avisa si ya cumplió la meta: un recordatorio innecesario es
-    // la forma más rápida de que la gente desactive las notificaciones.
-    if (agua && agua.hoy >= agua.meta) return;
-    new Notification("Tomá agua", {
-      body: agua ? `Llevás ${(agua.hoy / 1000).toFixed(1)} L de ${(agua.meta / 1000).toFixed(1)} L hoy.` : "",
-      icon: "/icono.svg", tag: "pulso-agua"
-    });
-  }, cada);
+          ${a.nota ? `<p style="font-size:12.5px; color:var(--tx3); line-height:1.6;
+             margin-top:12px; padding:10px 12px; background:var(--gr-800);
+             border-left:2px solid var(--az); border-radius:0 8px 8px 0">${esc(a.nota)}</p>` : ""}
+
+          ${a.bluetooth ? `<p style="font-size:12.5px; color:var(--ok); margin-top:12px">
+             Esta marca se conecta directo por Bluetooth desde Dispositivos, sin exportar nada.</p>` : ""}
+
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:14px">
+            ${a.enlace_android ? `<a class="btn sec chico" href="${esc(a.enlace_android)}"
+                target="_blank" rel="noopener noreferrer">Descargar (Android)</a>` : ""}
+            ${a.enlace_ios ? `<a class="btn sec chico" href="${esc(a.enlace_ios)}"
+                target="_blank" rel="noopener noreferrer">Descargar (iPhone)</a>` : ""}
+            ${a.sitio ? `<a class="btn sec chico" href="${esc(a.sitio)}"
+                target="_blank" rel="noopener noreferrer">Sitio</a>` : ""}
+          </div>
+        </div>
+      </div>`).join("")}
+
+    <div class="tarjeta" style="margin-top:16px"><div class="t-cu">
+      <p style="font-size:12.5px; color:var(--tx3); line-height:1.6">
+        ¿Usás una que no está en la lista? Si exporta en GPX, TCX o CSV, la
+        importación de archivos ya la va a entender aunque no aparezca acá.
+      </p>
+    </div></div>`;
 }
 
 /* ── Sueño ────────────────────────────────────────────────────────── */
@@ -777,7 +853,7 @@ async function borrarFoto(id) {
 /* ── Inicio ───────────────────────────────────────────────────────── */
 
 pintarEstructura("salud");
-verAgua().then(() => { if (agua && agua.recordar) armarRecordatorio(true); });
+verAgua();
 cargados.agua = true;
 </script>
 </body>

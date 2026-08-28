@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a1017">
+<title>Pulso · Entrenando</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+/* La sesión ocupa la pantalla entera y no lleva barra de pestañas.
+   Alguien con las manos ocupadas y el pulso a 160 no navega: mira un
+   número grande y toca un botón grande. Todo lo demás estorba. */
+body{overflow:hidden}
+body::before{opacity:.35}
+
+.sesion{
+  position:fixed; inset:0; display:flex; flex-direction:column;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+
+.s-top{
+  display:flex; align-items:center; gap:12px; padding:12px 16px;
+  border-bottom:1px solid var(--borde); background:rgba(10,16,23,.72);
+  backdrop-filter:blur(14px); flex:none;
+}
+.s-top .salir{
+  width:36px; height:36px; border-radius:10px; border:1px solid var(--borde);
+  background:var(--gr-850); color:var(--tx2); font-size:17px; cursor:pointer; flex:none;
+}
+.s-top .tit{flex:1; min-width:0}
+.s-top .tit b{display:block; font-size:14px; font-weight:700;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.s-top .tit span{font-size:11.5px; color:var(--tx3)}
+.s-top .reloj{
+  font-variant-numeric:tabular-nums; font-size:15px; font-weight:700; color:var(--tx2);
+  padding:6px 10px; background:var(--gr-850); border-radius:9px; border:1px solid var(--borde);
+}
+
+/* Progreso de la sesión: una barra por ejercicio, llenas las hechas. */
+.s-progreso{display:flex; gap:3px; padding:10px 16px; flex:none}
+.s-progreso div{flex:1; height:4px; border-radius:2px; background:var(--gr-750)}
+.s-progreso div.hecho{background:var(--ok)}
+.s-progreso div.actual{background:var(--az)}
+
+.s-cuerpo{flex:1; overflow-y:auto; padding:8px 16px 16px; -webkit-overflow-scrolling:touch}
+
+.ej-tit{text-align:center; margin-bottom:6px}
+.ej-tit h2{font-size:23px; font-weight:800; line-height:1.2; letter-spacing:-.4px}
+.ej-tit p{font-size:12.5px; color:var(--tx3); margin-top:5px}
+
+.objetivo{
+  display:flex; justify-content:center; gap:0; margin:16px 0;
+  border:1px solid var(--borde); border-radius:13px; overflow:hidden; background:var(--gr-850);
+}
+.objetivo div{flex:1; padding:12px 6px; text-align:center; border-right:1px solid var(--borde)}
+.objetivo div:last-child{border-right:none}
+.objetivo b{display:block; font-size:20px; font-weight:800; font-variant-numeric:tabular-nums}
+.objetivo span{display:block; font-size:10.5px; color:var(--tx3); margin-top:2px;
+  text-transform:uppercase; letter-spacing:.6px}
+
+/* El número grande: el cronómetro */
+.crono{
+  text-align:center; padding:22px 0 8px;
+  font-variant-numeric:tabular-nums;
+}
+.crono .num{
+  font-size:68px; font-weight:900; line-height:1; letter-spacing:-2.5px;
+  color:var(--tx);
+}
+.crono.trabajando .num{color:var(--az)}
+.crono.descansando .num{color:var(--ok)}
+.crono.pocos .num{color:var(--adv)}
+.crono .et{
+  font-size:11.5px; color:var(--tx3); text-transform:uppercase;
+  letter-spacing:1.6px; margin-top:8px; font-weight:700;
+}
+
+.aro{width:180px; height:180px; margin:0 auto; position:relative}
+.aro svg{transform:rotate(-90deg)}
+.aro .dentro{position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center}
+.aro .dentro b{font-size:44px; font-weight:900; line-height:1;
+  font-variant-numeric:tabular-nums; letter-spacing:-1.5px}
+.aro .dentro span{font-size:11px; color:var(--tx3); margin-top:5px;
+  text-transform:uppercase; letter-spacing:1.2px; font-weight:700}
+
+/* El botón principal. Grande a propósito: se toca con la mano sudada,
+   sin mirar, y a veces con guantes. */
+.b-gigante{
+  width:100%; padding:22px; border:none; border-radius:16px;
+  font:inherit; font-size:19px; font-weight:800; letter-spacing:-.3px;
+  cursor:pointer; transition:.15s; color:#fff;
+  background:linear-gradient(160deg,var(--az),var(--az-2));
+  box-shadow:0 8px 24px -8px rgba(43,116,196,.55);
+}
+.b-gigante:active{transform:scale(.98)}
+.b-gigante.parar{background:linear-gradient(160deg,#c9603c,#a44a2c);
+  box-shadow:0 8px 24px -8px rgba(180,80,50,.5)}
+.b-gigante.seguir{background:linear-gradient(160deg,var(--ok),#1d7a54);
+  box-shadow:0 8px 24px -8px rgba(38,138,96,.45)}
+.b-gigante:disabled{opacity:.5; cursor:default; box-shadow:none}
+
+.fila-b{display:flex; gap:8px; margin-top:10px}
+.fila-b button{
+  flex:1; padding:13px; border:1px solid var(--borde); border-radius:12px;
+  background:var(--gr-850); color:var(--tx2); font:inherit; font-size:13.5px;
+  font-weight:600; cursor:pointer;
+}
+.fila-b button:hover{border-color:var(--az); color:var(--tx)}
+
+.campos{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin:14px 0}
+.campos label{display:flex; flex-direction:column; gap:5px}
+.campos span{font-size:10.5px; color:var(--tx3); text-transform:uppercase;
+  letter-spacing:.6px; font-weight:700; text-align:center}
+.campos input, .campos select{
+  padding:13px 8px; border:1px solid var(--borde); border-radius:11px;
+  background:var(--gr-900); color:var(--tx); font:inherit; font-size:17px;
+  font-weight:700; text-align:center; font-variant-numeric:tabular-nums;
+}
+.campos input:focus, .campos select:focus{outline:none; border-color:var(--az)}
+
+/* Las series ya hechas, en fila, para verlas de un vistazo */
+.hechas{display:flex; gap:6px; flex-wrap:wrap; margin-top:14px; justify-content:center}
+.hechas .s{
+  padding:7px 11px; border-radius:9px; background:var(--gr-850);
+  border:1px solid var(--borde); font-size:12px; font-variant-numeric:tabular-nums;
+}
+.hechas .s b{font-weight:700}
+.hechas .s i{font-style:normal; color:var(--tx3); font-size:10.5px; margin-left:4px}
+.hechas .s.rapida{border-color:var(--ok-3); background:var(--ok-tenue)}
+.hechas .s.rapida i{color:var(--ok)}
+
+.veredicto{
+  margin-top:14px; padding:13px 15px; border-radius:12px; font-size:13.5px;
+  line-height:1.5; text-align:center;
+}
+.veredicto.mejor{background:var(--ok-tenue); border:1px solid var(--ok-3); color:var(--ok)}
+.veredicto.igual{background:var(--gr-850); border:1px solid var(--borde); color:var(--tx2)}
+.veredicto.peor{background:var(--gr-850); border:1px solid var(--borde); color:var(--tx2)}
+
+.s-pie{flex:none; padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--borde); background:rgba(10,16,23,.8); backdrop-filter:blur(14px)}
+
+/* Música: no se controla desde acá, se abre la app que la persona usa. */
+.musica{display:flex; gap:7px; margin-top:14px}
+.musica a{
+  flex:1; padding:10px; border-radius:11px; text-align:center; text-decoration:none;
+  font-size:12px; font-weight:650; border:1px solid var(--borde);
+  background:var(--gr-850); color:var(--tx2);
+}
+.musica a:hover{border-color:var(--az); color:var(--tx)}
+
+.resumen-fin{text-align:center; padding:20px 0}
+.resumen-fin .grande{font-size:46px; font-weight:900; color:var(--ac); line-height:1}
+.resumen-fin .cifras{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:22px 0}
+.resumen-fin .cifras div{padding:14px 6px; background:var(--gr-850);
+  border:1px solid var(--borde); border-radius:12px}
+.resumen-fin .cifras b{display:block; font-size:21px; font-weight:800;
+  font-variant-numeric:tabular-nums}
+.resumen-fin .cifras span{font-size:10.5px; color:var(--tx3); text-transform:uppercase;
+  letter-spacing:.6px}
+.pts{display:flex; justify-content:space-between; padding:9px 0;
+  border-bottom:1px solid var(--borde); font-size:13.5px}
+.pts:last-child{border-bottom:none}
+.pts b{color:var(--ac); font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="sesion">
+  <div class="s-top">
+    <button class="salir" onclick="salir()" title="Salir">&#10005;</button>
+    <div class="tit"><b id="t-nombre">Cargando…</b><span id="t-sub"></span></div>
+    <div class="reloj" id="t-reloj">0:00</div>
+  </div>
+
+  <div class="s-progreso" id="progreso"></div>
+  <div class="s-cuerpo" id="cuerpo"><div class="cargando">Cargando tu rutina…</div></div>
+  <div class="s-pie" id="pie"></div>
+</div>
+
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const usuario = Sesion.exigir();
+
+/* ── Estado ───────────────────────────────────────────────────────────
+   Todo el modo sesión vive en memoria y se guarda serie a serie en el
+   teléfono. Si la aplicación se cierra a mitad de rutina, lo registrado
+   ya está a salvo; lo único que se pierde es el cronómetro en curso, y
+   eso es aceptable. */
+let rutina = null;
+let iEj = 0;                 // ejercicio actual
+let fase = "listo";          // listo | trabajando | descansando
+let t0 = 0;                  // arranque del cronómetro en curso
+let tick = null;
+let inicioSesion = Date.now();
+let candado = null;          // Wake Lock
+let ultimoDescanso = null;   // segundos que descansó antes de esta serie
+let hechas = [];             // series de la sesión, para el resumen
+
+/* ── Sonido ───────────────────────────────────────────────────────────
+   La alarma se genera con el sintetizador del navegador en vez de un
+   archivo de audio. Tres razones: no hay nada que descargar, suena igual
+   sin conexión, y sale por los audífonos como cualquier otro sonido del
+   teléfono, así que se escucha por encima de la música.
+
+   El contexto de audio se crea recién con el primer toque de la persona:
+   los navegadores no dejan que una página haga ruido antes de eso, y
+   crearlo al cargar lo deja bloqueado para toda la sesión. */
+let audio = null;
+
+function despertarAudio() {
+  if (audio) { if (audio.state === "suspended") audio.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (AC) { try { audio = new AC(); } catch (e) { audio = null; } }
+}
+
+function pitar(veces, hz) {
+  if (!audio || audio.state !== "running") return;
+  for (let i = 0; i < veces; i++) {
+    const t = audio.currentTime + i * 0.28;
+    const osc = audio.createOscillator();
+    const vol = audio.createGain();
+    osc.frequency.value = hz || 880;
+    osc.type = "sine";
+    // La envolvente evita el chasquido de cortar una onda en seco.
+    vol.gain.setValueAtTime(0, t);
+    vol.gain.linearRampToValueAtTime(0.28, t + 0.02);
+    vol.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    osc.connect(vol); vol.connect(audio.destination);
+    osc.start(t); osc.stop(t + 0.24);
+  }
+}
+
+const vibrar = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
+
+/* ── Pantalla encendida ───────────────────────────────────────────────
+   Sin esto el teléfono se apaga a los treinta segundos y el cronómetro
+   de descanso queda invisible justo cuando hace falta. El permiso se
+   pierde al cambiar de pestaña, así que se vuelve a pedir al volver. */
+async function trabarPantalla() {
+  if (!("wakeLock" in navigator)) return;
+  try { candado = await navigator.wakeLock.request("screen"); } catch (e) { candado = null; }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && fase !== "listo") trabarPantalla();
+});
+
+/* ── Carga ────────────────────────────────────────────────────────── */
+
+async function arrancar() {
+  try {
+    const p = await api("/entrenamiento/paquete?dias=1");
+    rutina = p.dias && p.dias[0] ? p.dias[0] : null;
+  } catch (err) {
+    document.getElementById("cuerpo").innerHTML =
+      `<div class="aviso mal">${esc(err.message)}</div>`;
+    return;
+  }
+
+  if (!rutina || !rutina.ejercicios || rutina.ejercicios.length === 0) {
+    document.getElementById("cuerpo").innerHTML = `
+      <div class="tarjeta"><div class="t-cu" style="text-align:center; padding:30px 20px">
+        <h3 style="font-size:16px; margin-bottom:8px">Hoy no hay rutina</h3>
+        <p style="font-size:13.5px; color:var(--tx2); line-height:1.6">
+          Puede ser tu día de descanso, o que todavía no generaste el plan.</p>
+        <a class="btn" href="/hoy.html" style="margin-top:16px; display:inline-block">Ir a Hoy</a>
+      </div></div>`;
+    document.getElementById("t-nombre").textContent = "Sin rutina";
+    return;
+  }
+
+  // Se salta lo que ya esté completo: alguien que empezó en Hoy y pasa a
+  // modo sesión no tiene que volver a recorrer lo hecho.
+  while (iEj < rutina.ejercicios.length && yaCompleto(rutina.ejercicios[iEj])) iEj++;
+  if (iEj >= rutina.ejercicios.length) { terminar(); return; }
+
+  document.getElementById("t-nombre").textContent = rutina.nombre || "Entrenamiento";
+  relojSesion();
+  pintar();
+}
+
+const yaCompleto = (ej) => (ej.realizadas || []).length >= ej.series;
+
+function relojSesion() {
+  setInterval(() => {
+    const s = Math.floor((Date.now() - inicioSesion) / 1000);
+    document.getElementById("t-reloj").textContent =
+      `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }, 1000);
+}
+
+/* ── Pintado ──────────────────────────────────────────────────────── */
+
+function pintar() {
+  const ej = rutina.ejercicios[iEj];
+  const hechasEj = (ej.realizadas || []).length;
+  const esTiempo = ej.medida === "segundos" || ej.medida === "minutos";
+
+  document.getElementById("progreso").innerHTML = rutina.ejercicios.map((e, i) =>
+    `<div class="${yaCompleto(e) ? "hecho" : i === iEj ? "actual" : ""}"></div>`).join("");
+
+  document.getElementById("t-sub").textContent =
+    `Ejercicio ${iEj + 1} de ${rutina.ejercicios.length}`;
+
+  document.getElementById("cuerpo").innerHTML = `
+    <div class="ej-tit">
+      <h2>${esc(ej.nombre)}</h2>
+      <p>Serie ${Math.min(hechasEj + 1, ej.series)} de ${ej.series}${
+        ej.musculo ? " · " + esc(ej.musculo) : ""}</p>
+    </div>
+
+    <div class="objetivo">
+      <div><b>${ej.series}</b><span>Series</span></div>
+      <div><b>${esc(String(ej.repeticiones))}</b><span>${esTiempo ? esc(ej.medida) : "Reps"}</span></div>
+      <div><b>${ej.descanso_seg}s</b><span>Descanso</span></div>
+    </div>
+
+    <div id="zona-crono"></div>
+
+    <div class="campos">
+      <label><span>${esTiempo ? esc(ej.medida) : "Reps"}</span>
+        <input type="number" id="c-reps" value="${primerNumero(ej.repeticiones)}"
+               inputmode="numeric" min="1"></label>
+      <label><span>Peso kg</span>
+        <input type="number" id="c-peso" value="${ej.peso_sugerido || 0}"
+               inputmode="decimal" step="0.5" min="0" ${esTiempo ? "disabled" : ""}></label>
+      <label><span>Esfuerzo</span>
+        <select id="c-rpe">
+          <option value="">—</option>
+          <option value="6">Fácil</option>
+          <option value="7">Bien</option>
+          <option value="8" selected>Costó</option>
+          <option value="9">Al límite</option>
+          <option value="10">No pude más</option>
+        </select></label>
+    </div>
+
+    <div id="zona-veredicto"></div>
+    <div class="hechas" id="zona-hechas">${pintarHechas(ej)}</div>
+
+    <div class="musica">
+      <a href="spotify://" onclick="return abrirMusica(event,'spotify://','https://open.spotify.com')">Spotify</a>
+      <a href="youtubemusic://" onclick="return abrirMusica(event,'youtubemusic://','https://music.youtube.com')">YT Music</a>
+    </div>
+    <p style="font-size:11.5px; color:var(--tx3); text-align:center; margin-top:9px; line-height:1.5">
+      Poné tu música donde quieras: las alarmas suenan por encima, también con audífonos.
+    </p>`;
+
+  pintarCrono();
+  pintarPie();
+}
+
+/** "8-12" viene del motor para principiantes; el campo necesita un número. */
+function primerNumero(v) {
+  const m = String(v).match(/\d+/);
+  return m ? m[0] : 10;
+}
+
+function pintarHechas(ej) {
+  return (ej.realizadas || []).map((s, i) => `
+    <div class="s ${s.rapida ? "rapida" : ""}">
+      <b>${s.repeticiones}${s.peso_kg > 0 ? " × " + s.peso_kg + "kg" : ""}</b>
+      ${s.segundos_trabajo ? `<i>${s.segundos_trabajo}s</i>` : ""}
+    </div>`).join("");
+}
+
+function pintarCrono() {
+  const z = document.getElementById("zona-crono");
+  if (!z) return;
+
+  if (fase === "listo") {
+    z.innerHTML = `
+      <div class="crono">
+        <div class="num">—</div>
+        <div class="et">Tocá empezar cuando arranques</div>
+      </div>`;
+    return;
+  }
+
+  if (fase === "trabajando") {
+    z.innerHTML = `
+      <div class="crono trabajando">
+        <div class="num" id="n-crono">0:00</div>
+        <div class="et">Trabajando</div>
+      </div>`;
+    return;
+  }
+
+  // Descanso: aro que se vacía, para verlo desde lejos sin leer.
+  z.innerHTML = `
+    <div class="aro">
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <circle cx="90" cy="90" r="80" fill="none" stroke="var(--gr-750)" stroke-width="9"/>
+        <circle cx="90" cy="90" r="80" fill="none" stroke="var(--ok)" stroke-width="9"
+                stroke-linecap="round" id="aro-linea"
+                stroke-dasharray="502.65" stroke-dashoffset="0"/>
+      </svg>
+      <div class="dentro"><b id="n-crono">0:00</b><span>Descanso</span></div>
+    </div>`;
+}
+
+function pintarPie() {
+  const p = document.getElementById("pie");
+  const ej = rutina.ejercicios[iEj];
+
+  if (fase === "listo") {
+    p.innerHTML = `
+      <button class="b-gigante" onclick="empezarSerie()">Empezar serie</button>
+      <div class="fila-b">
+        <button onclick="saltarEjercicio()">Saltar ejercicio</button>
+        <button onclick="registrarSinCrono()">Anotar sin cronómetro</button>
+      </div>`;
+  } else if (fase === "trabajando") {
+    p.innerHTML = `
+      <button class="b-gigante parar" onclick="terminarSerie()">Terminé la serie</button>
+      <div class="fila-b"><button onclick="cancelarSerie()">Cancelar</button></div>`;
+  } else {
+    p.innerHTML = `
+      <button class="b-gigante seguir" onclick="saltarDescanso()">Estoy listo, seguir</button>
+      <div class="fila-b">
+        <button onclick="masDescanso(30)">+30 s</button>
+        <button onclick="masDescanso(-15)">−15 s</button>
+      </div>`;
+  }
+}
+
+/* ── El ciclo ─────────────────────────────────────────────────────── */
+
+function empezarSerie() {
+  despertarAudio();          // primer toque: acá se desbloquea el sonido
+  trabarPantalla();
+  fase = "trabajando";
+  t0 = Date.now();
+  pintarCrono(); pintarPie();
+  correr();
+  vibrar(30);
+}
+
+function cancelarSerie() {
+  pararReloj();
+  fase = "listo";
+  pintarCrono(); pintarPie();
+}
+
+async function terminarSerie() {
+  const trabajo = Math.round((Date.now() - t0) / 1000);
+  pararReloj();
+
+  const ej = rutina.ejercicios[iEj];
+  const esTiempo = ej.medida === "segundos" || ej.medida === "minutos";
+  const reps = Number(document.getElementById("c-reps").value);
+  const peso = esTiempo ? 0 : Number(document.getElementById("c-peso").value || 0);
+  const rpeTxt = document.getElementById("c-rpe").value;
+  const rpe = rpeTxt === "" ? null : Number(rpeTxt);
+
+  if (!reps || reps < 1) {
+    alert("Anotá cuántas " + (esTiempo ? "unidades sostuviste" : "repeticiones hiciste") + ".");
+    fase = "trabajando"; t0 = Date.now(); correr(); pintarPie();
+    return;
+  }
+
+  const num = (ej.realizadas || []).length + 1;
+  const creible = tiempoCreible(trabajo, reps);
+
+  try {
+    await Almacen.guardarSerie({
+      ejercicio_id: ej.ejercicio_id, rutina_ejercicio_id: ej.id,
+      serie_num: num, repeticiones: reps, peso_kg: peso, rpe,
+      // Un cronómetro que quedó corriendo no se guarda, pero la serie sí:
+      // perder el registro por un tiempo malo sería el peor de los males.
+      segundos_trabajo: creible.guardar ? trabajo : null,
+      segundos_descanso: ultimoDescanso
+    });
+  } catch (err) {
+    alert(err.invalida ? err.message : "No se pudo guardar. Probá de nuevo.");
+    fase = "listo"; pintarCrono(); pintarPie();
+    return;
+  }
+
+  const comparacion = creible.guardar ? compararConHistorial(ej, reps, peso, trabajo) : null;
+
+  ej.realizadas = ej.realizadas || [];
+  ej.realizadas.push({ serie_num: num, repeticiones: reps, peso_kg: peso, rpe,
+    segundos_trabajo: creible.guardar ? trabajo : null,
+    rapida: comparacion && comparacion.estado === "mejor" });
+
+  hechas.push({ segundos_trabajo: trabajo, segundos_descanso: ultimoDescanso,
+    descanso_objetivo: ej.descanso_seg, comparacion });
+
+  vibrar([40, 60, 40]);
+  pitar(1, 660);
+
+  const acabo = ej.realizadas.length >= ej.series;
+  const ultimo = iEj >= rutina.ejercicios.length - 1;
+
+  if (acabo && ultimo) { terminar(); return; }
+
+  // El descanso lo pide la rutina; el esfuerzo declarado lo ajusta.
+  const seg = descansoPorEsfuerzo(ej.descanso_seg, rpe);
+  arrancarDescanso(seg, acabo, creible, comparacion);
+}
+
+function descansoPorEsfuerzo(base, rpe) {
+  let s = Number(base) || 60;
+  if (rpe >= 9.5) s = Math.round(s * 1.35);
+  else if (rpe >= 8.5) s = Math.round(s * 1.15);
+  else if (rpe > 0 && rpe <= 6) s = Math.round(s * 0.85);
+  return Math.max(20, Math.min(300, s));
+}
+
+/** Copia local de la comprobación del servidor, para avisar en el momento. */
+function tiempoCreible(s, reps) {
+  if (!Number.isFinite(s) || s <= 0) return { guardar: false, motivo: null };
+  if (s > 900) return { guardar: false, motivo: "Pasaron más de 15 minutos: no se guardó el tiempo." };
+  if (reps > 1 && s < reps * 0.8) return { guardar: false, motivo: "Muy rápido para esas repeticiones: no se guardó el tiempo." };
+  return { guardar: true, motivo: null };
+}
+
+/**
+ * Compara con las series equivalentes de esta misma sesión y con las que
+ * vinieron del historial. Sólo entran las de las MISMAS repeticiones y
+ * el MISMO peso: ser más rápido haciendo menos no es ser mejor.
+ */
+function compararConHistorial(ej, reps, peso, trabajo) {
+  const previas = (ej.historial_tiempos || []).concat(
+    (ej.realizadas || []).filter(s => s.segundos_trabajo > 0));
+
+  const iguales = previas.filter(p =>
+    Number(p.repeticiones) === reps &&
+    Math.abs(Number(p.peso_kg || 0) - peso) < 0.51 &&
+    Number(p.segundos_trabajo) > 0);
+
+  if (iguales.length < 2) return null;
+
+  const t = iguales.map(p => Number(p.segundos_trabajo)).sort((a, b) => a - b);
+  const medio = t.length % 2 ? t[(t.length - 1) / 2]
+                             : (t[t.length / 2 - 1] + t[t.length / 2]) / 2;
+  const dif = trabajo - medio;
+  const pct = medio > 0 ? (dif / medio) * 100 : 0;
+
+  if (Math.abs(pct) < 8) return { estado: "igual", mensaje: `Mismo ritmo de siempre (${Math.round(medio)} s)` };
+  if (pct < 0) return { estado: "mejor", mensaje: `${Math.abs(Math.round(dif))} s más rápido que tu ritmo habitual` };
+  return { estado: "peor", mensaje: `${Math.round(dif)} s más lento de lo habitual` };
+}
+
+/* ── Descanso ─────────────────────────────────────────────────────── */
+let finDescanso = 0, largoDescanso = 0, avisado3 = false;
+
+function arrancarDescanso(seg, cambiaEjercicio, creible, comparacion) {
+  fase = "descansando";
+  largoDescanso = seg;
+  finDescanso = Date.now() + seg * 1000;
+  avisado3 = false;
+  if (cambiaEjercicio) iEj++;
+
+  pintar();
+
+  const z = document.getElementById("zona-veredicto");
+  if (z) {
+    if (creible && !creible.guardar && creible.motivo) {
+      z.innerHTML = `<div class="veredicto igual">${esc(creible.motivo)}</div>`;
+    } else if (comparacion) {
+      z.innerHTML = `<div class="veredicto ${comparacion.estado}">${esc(comparacion.mensaje)}</div>`;
+    }
+  }
+  correr();
+}
+
+function masDescanso(seg) {
+  finDescanso += seg * 1000;
+  if (finDescanso < Date.now() + 3000) finDescanso = Date.now() + 3000;
+  avisado3 = false;
+}
+
+function saltarDescanso() { finDescanso = Date.now(); }
+
+function terminarDescanso() {
+  pararReloj();
+  ultimoDescanso = largoDescanso;
+  fase = "listo";
+  // Tres pitidos y vibración: la persona puede estar mirando a otro lado.
+  pitar(3, 880);
+  vibrar([90, 70, 90, 70, 140]);
+  pintar();
+}
+
+/* ── Reloj ────────────────────────────────────────────────────────── */
+
+/**
+ * Un solo temporizador para las dos fases.
+ *
+ * Cuenta contra la hora del sistema y no sumando 100 ms cada vuelta: los
+ * navegadores frenan los temporizadores de las pestañas en segundo plano,
+ * y un contador que suma se atrasa minutos mientras la persona mira otra
+ * aplicación. Comparar contra el reloj real es inmune a eso.
+ */
+function correr() {
+  pararReloj();
+  tick = setInterval(() => {
+    const n = document.getElementById("n-crono");
+
+    if (fase === "trabajando") {
+      const s = Math.floor((Date.now() - t0) / 1000);
+      if (n) n.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+      return;
+    }
+
+    if (fase === "descansando") {
+      const resta = Math.max(0, Math.ceil((finDescanso - Date.now()) / 1000));
+      if (n) n.textContent = `${Math.floor(resta / 60)}:${String(resta % 60).padStart(2, "0")}`;
+
+      const linea = document.getElementById("aro-linea");
+      if (linea && largoDescanso > 0) {
+        linea.style.strokeDashoffset = 502.65 * (1 - resta / largoDescanso);
+      }
+      const caja = document.querySelector(".crono");
+      if (caja) caja.classList.toggle("pocos", resta <= 5);
+
+      // Aviso a los tres segundos, para levantarse antes de que suene.
+      if (resta <= 3 && resta > 0 && !avisado3) { avisado3 = true; pitar(1, 520); }
+      if (resta <= 0) terminarDescanso();
+    }
+  }, 200);
+}
+
+function pararReloj() { clearInterval(tick); tick = null; }
+
+/* ── Atajos ───────────────────────────────────────────────────────── */
+
+function saltarEjercicio() {
+  if (iEj >= rutina.ejercicios.length - 1) { terminar(); return; }
+  iEj++; fase = "listo"; ultimoDescanso = null;
+  pintar();
+}
+
+/** Para quien prefiere anotar y ya, sin cronometrar nada. */
+async function registrarSinCrono() {
+  t0 = Date.now();          // trabajo = 0, no se guarda tiempo
+  await terminarSerie();
+}
+
+function abrirMusica(e, esquema, web) {
+  e.preventDefault();
+  // Se intenta abrir la aplicación instalada; si no está, se cae al sitio.
+  // No hay forma de saber desde el navegador si la app existe, así que se
+  // prueba y se espera: si seguimos acá al segundo, no estaba.
+  const antes = Date.now();
+  const t = setTimeout(() => {
+    if (Date.now() - antes < 1600) window.open(web, "_blank", "noopener");
+  }, 1200);
+  window.location.href = esquema;
+  window.addEventListener("pagehide", () => clearTimeout(t), { once: true });
+  return false;
+}
+
+function salir() {
+  if (hechas.length > 0 && !confirm("Vas a salir con la sesión a medias. Lo registrado ya está guardado. ¿Salir?")) return;
+  location.href = "/hoy.html";
+}
+
+/* ── Fin ──────────────────────────────────────────────────────────── */
+
+async function terminar() {
+  pararReloj();
+  if (candado) { try { candado.release(); } catch (e) {} candado = null; }
+  pitar(4, 990);
+  vibrar([120, 80, 120, 80, 200]);
+
+  const minutos = Math.round((Date.now() - inicioSesion) / 60000);
+  const totalSeries = hechas.length;
+  const rapidas = hechas.filter(h => h.comparacion && h.comparacion.estado === "mejor").length;
+
+  // Los puntos se calculan en el servidor cuando llegan las series: acá
+  // sólo se muestra lo que se hizo. Mostrar un número que después no
+  // coincide con el ranking es peor que no mostrarlo.
+  const trabajado = hechas.reduce((a, h) => a + (h.segundos_trabajo || 0), 0);
+
+  document.getElementById("progreso").innerHTML =
+    rutina ? rutina.ejercicios.map(() => `<div class="hecho"></div>`).join("") : "";
+  document.getElementById("t-nombre").textContent = "Sesión terminada";
+  document.getElementById("t-sub").textContent = "";
+
+  document.getElementById("cuerpo").innerHTML = `
+    <div class="resumen-fin">
+      <div class="grande">✓</div>
+      <h2 style="font-size:21px; font-weight:800; margin-top:14px">Terminaste</h2>
+      <div class="cifras">
+        <div><b>${minutos}</b><span>Minutos</span></div>
+        <div><b>${totalSeries}</b><span>Series</span></div>
+        <div><b>${Math.round(trabajado / 60)}</b><span>Min. de trabajo</span></div>
+      </div>
+      ${rapidas > 0 ? `<div class="veredicto mejor">
+        Fuiste más rápido que de costumbre en ${rapidas} ${rapidas === 1 ? "serie" : "series"}.
+        Eso es progreso aunque el peso no haya subido.</div>` : ""}
+      <p style="font-size:12.5px; color:var(--tx3); margin-top:16px; line-height:1.6">
+        Todo quedó guardado en tu teléfono y se sube solo cuando haya señal.
+      </p>
+    </div>`;
+
+  document.getElementById("pie").innerHTML = `
+    <a class="btn" href="/progreso.html" style="display:block; text-align:center">Ver mi progreso</a>
+    <div class="fila-b"><button onclick="location.href='/hoy.html'">Volver a Hoy</button></div>`;
+
+  Almacen.sincronizar().catch(() => {});
+}
+
+arrancar();
+</script>
+</body>
+</html>

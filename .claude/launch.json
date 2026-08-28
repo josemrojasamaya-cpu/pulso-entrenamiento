@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "maqueta",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Users/josma/AppData/Local/Temp/claude/C--Users-josma-OneDrive-Escritorio-SATI-Ingenier-a-SATI-Laboratorio-Dev/34602b06-60dc-4251-bae1-6384991bf18c/scratchpad/maqueta.js"],
+      "port": 4321
+    }
+  ]
+}

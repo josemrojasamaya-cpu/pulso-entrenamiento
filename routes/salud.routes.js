@@ -3,6 +3,7 @@ const pool = require("../config/db");
 const { requiereSesion } = require("../middleware/auth");
 const { leer } = require("../lib/importar");
 const { planDe } = require("../lib/planes");
+const { catalogo } = require("../lib/aplicaciones");
 
 const router = express.Router();
 router.use(requiereSesion);
@@ -84,6 +85,17 @@ router.delete("/dispositivos/:id", async (req, res) => {
     } catch (err) {
         res.status(500).json({ message: "No se pudo quitar el dispositivo." });
     }
+});
+
+/**
+ * Catálogo de aplicaciones que se pueden traer.
+ *
+ * No hace falta sesión de nadie más ni convenio con nadie: son los pasos
+ * para que la persona baje SUS datos de donde ya los tiene. Si no usa
+ * una plataforma, no va a ver nada de esa plataforma, y eso está bien.
+ */
+router.get("/aplicaciones", (_req, res) => {
+    res.json({ aplicaciones: catalogo() });
 });
 
 /* ── Importación de archivos ──────────────────────────────────────── */
@@ -240,7 +252,31 @@ router.post("/agua", async (req, res) => {
             `SELECT COALESCE(SUM(ml),0)::int total FROM hidratacion
               WHERE usuario_id = $1 AND fecha = CURRENT_DATE`, [req.usuario.id]
         );
-        res.status(201).json({ hoy: r.rows[0].total });
+        const total = r.rows[0].total;
+
+        // Los puntos se dan por CUMPLIR LA META DEL DIA, una sola vez, y
+        // no por cada vaso registrado. Pagar por toque invita a tocar el
+        // boton veinte veces sin tomar nada, y un ranking que se puede
+        // inflar deja de significar algo a los tres dias.
+        const perfil = await pool.query(
+            "SELECT meta_agua_ml FROM perfiles WHERE usuario_id = $1", [req.usuario.id]
+        );
+        const meta = perfil.rowCount ? perfil.rows[0].meta_agua_ml : 2500;
+        let gano = 0;
+
+        if (total >= meta) {
+            const hoy = new Date().toISOString().slice(0, 10);
+            const p = await pool.query(
+                `INSERT INTO puntos (usuario_id, tipo, puntos, detalle, referencia, fecha)
+                 VALUES ($1,'hidratacion',20,'Meta de hidratación cumplida',$2,CURRENT_DATE)
+                 ON CONFLICT (usuario_id, tipo, referencia) DO NOTHING
+                 RETURNING id`,
+                [req.usuario.id, `agua-${hoy}`]
+            );
+            if (p.rowCount) gano = 20;
+        }
+
+        res.status(201).json({ hoy: total, meta_cumplida: total >= meta, puntos_ganados: gano });
     } catch (err) {
         res.status(500).json({ message: "No se pudo registrar." });
     }

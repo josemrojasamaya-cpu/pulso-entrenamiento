@@ -8,6 +8,20 @@ const { semanaDe, aplicar: aplicarPeriodizacion } = require("../lib/periodizacio
 const { enlaceVideo } = require("../db/ejercicios");
 
 const router = express.Router();
+
+/**
+ * Un tiempo de serie que se pueda creer, o NULL.
+ *
+ * El caso real: el teléfono queda en el bolsillo con el cronómetro
+ * corriendo y llega un número de veinte minutos. Guardarlo envenenaría
+ * la mediana de ese ejercicio durante meses, y esa mediana es la que
+ * decide si a la persona se le dice que mejoró.
+ */
+function tiempoValido(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0 || n > 3600) return null;
+    return Math.round(n);
+}
 router.use(requiereSesion);
 
 /* ── Utilidades ───────────────────────────────────────────────────── */
@@ -262,17 +276,49 @@ async function leerRutina(usuarioId, fecha) {
         [rutina.id]
     );
 
-    const hechas = await pool.query(
-        `SELECT rutina_ejercicio_id, serie_num, repeticiones, peso_kg, rpe, realizada_en
-           FROM series WHERE usuario_id = $1
-            AND rutina_ejercicio_id = ANY($2::int[])
-          ORDER BY serie_num`,
-        [usuarioId, ej.rows.map(e => e.id)]
-    );
+    const idsEjercicio = [...new Set(ej.rows.map(e => e.ejercicio_id))];
+
+    const [hechas, tiempos] = await Promise.all([
+        pool.query(
+            `SELECT rutina_ejercicio_id, serie_num, repeticiones, peso_kg, rpe,
+                    realizada_en, segundos_trabajo, segundos_descanso
+               FROM series WHERE usuario_id = $1
+                AND rutina_ejercicio_id = ANY($2::int[])
+              ORDER BY serie_num`,
+            [usuarioId, ej.rows.map(e => e.id)]
+        ),
+        // Tiempos anteriores del mismo ejercicio, para que el modo sesión
+        // pueda decir "hoy fuiste más rápido" sin pedir nada al servidor
+        // en mitad de la serie: adentro del gimnasio la señal es mala, y
+        // una comparación que llega tarde no sirve de nada.
+        //
+        // Se acota a 40 por ejercicio y a 90 días: más historia no mejora
+        // la mediana y sí engorda la respuesta, que viaja por datos.
+        idsEjercicio.length === 0 ? Promise.resolve({ rows: [] }) : pool.query(
+            `SELECT ejercicio_id, repeticiones, peso_kg, segundos_trabajo
+               FROM (
+                 SELECT ejercicio_id, repeticiones, peso_kg, segundos_trabajo,
+                        ROW_NUMBER() OVER (PARTITION BY ejercicio_id
+                                           ORDER BY realizada_en DESC) rn
+                   FROM series
+                  WHERE usuario_id = $1
+                    AND ejercicio_id = ANY($2::int[])
+                    AND segundos_trabajo IS NOT NULL
+                    AND realizada_en > NOW() - INTERVAL '90 days'
+               ) t
+              WHERE rn <= 40`,
+            [usuarioId, idsEjercicio]
+        )
+    ]);
 
     const porEjercicio = {};
     for (const s of hechas.rows) {
         (porEjercicio[s.rutina_ejercicio_id] = porEjercicio[s.rutina_ejercicio_id] || []).push(s);
+    }
+
+    const porTiempo = {};
+    for (const t of tiempos.rows) {
+        (porTiempo[t.ejercicio_id] = porTiempo[t.ejercicio_id] || []).push(t);
     }
 
     return {
@@ -280,7 +326,8 @@ async function leerRutina(usuarioId, fecha) {
         ejercicios: ej.rows.map(e => ({
             ...e,
             video: e.video_url || enlaceVideo(e.nombre + " tecnica"),
-            realizadas: porEjercicio[e.id] || []
+            realizadas: porEjercicio[e.id] || [],
+            historial_tiempos: porTiempo[e.ejercicio_id] || []
         }))
     };
 }
@@ -605,15 +652,24 @@ router.post("/series", async (req, res) => {
                 const r = await cliente.query(
                     `INSERT INTO series
                        (id_local, usuario_id, rutina_ejercicio_id, ejercicio_id,
-                        serie_num, repeticiones, peso_kg, rpe, realizada_en)
-                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8, COALESCE($9::timestamptz, NOW()))
+                        serie_num, repeticiones, peso_kg, rpe, realizada_en,
+                        segundos_trabajo, segundos_descanso)
+                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8, COALESCE($9::timestamptz, NOW()),
+                             $10,$11)
                      ON CONFLICT (usuario_id, id_local) DO NOTHING
                      RETURNING id`,
                     [s.id_local || null, usuarioId, ref, Number(s.ejercicio_id),
                      Number(s.serie_num) || 1, Number(s.repeticiones),
                      s.peso_kg === null || s.peso_kg === undefined ? 0 : Number(s.peso_kg),
                      s.rpe === null || s.rpe === undefined || s.rpe === "" ? null : Number(s.rpe),
-                     s.realizada_en || null]
+                     s.realizada_en || null,
+                     // Los tiempos son opcionales: quien registra a mano sin
+                     // cronómetro sigue guardando igual, con NULL acá. Y un
+                     // valor absurdo se convierte en NULL en vez de rechazar
+                     // la serie entera: perder el registro por un cronómetro
+                     // que quedó corriendo sería el peor de los dos males.
+                     tiempoValido(s.segundos_trabajo),
+                     tiempoValido(s.segundos_descanso)]
                 );
                 await cliente.query("RELEASE SAVEPOINT una_serie");
 

@@ -556,3 +556,37 @@ CREATE TABLE IF NOT EXISTS fotos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_fotos_usuario ON fotos (usuario_id, fecha DESC);
+
+
+-- ---------------------------------------------------------------------
+--  Tiempos de la serie · el cronómetro del entrenamiento
+--
+--  Dos números por serie: cuánto duró el trabajo y cuánto descansó
+--  después. Sirven para dos cosas distintas.
+--
+--  El TRABAJO dice cómo se está moviendo el peso. Diez repeticiones en
+--  minuto y medio y diez repeticiones en cuarenta segundos son el mismo
+--  registro en el papel y dos entrenamientos completamente distintos.
+--  Cuando el mismo peso empieza a salir más rápido, la persona mejoró
+--  aunque el número de kilos no se haya movido — y eso es justo lo que
+--  hace abandonar a la gente que sólo mira los kilos.
+--
+--  El DESCANSO dice si de verdad respetó la pauta. Una rutina de fuerza
+--  con noventa segundos de descanso hecha con veinte segundos entre
+--  series no es esa rutina: es otra cosa, y explica por qué no avanza.
+--
+--  Ambos son opcionales: quien registre a mano sin cronómetro sigue
+--  funcionando igual, con NULL en estas columnas.
+-- ---------------------------------------------------------------------
+ALTER TABLE series ADD COLUMN IF NOT EXISTS segundos_trabajo  INTEGER;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS segundos_descanso INTEGER;
+
+-- Un límite de cordura: nadie hace una serie de dos horas. Si llega un
+-- número así es que el cronómetro quedó corriendo con el teléfono en el
+-- bolsillo, y guardarlo ensuciaría todas las comparaciones futuras.
+ALTER TABLE series DROP CONSTRAINT IF EXISTS ck_seg_trabajo;
+ALTER TABLE series ADD CONSTRAINT ck_seg_trabajo
+    CHECK (segundos_trabajo IS NULL OR (segundos_trabajo >= 0 AND segundos_trabajo <= 3600));
+ALTER TABLE series DROP CONSTRAINT IF EXISTS ck_seg_descanso;
+ALTER TABLE series ADD CONSTRAINT ck_seg_descanso
+    CHECK (segundos_descanso IS NULL OR (segundos_descanso >= 0 AND segundos_descanso <= 3600));

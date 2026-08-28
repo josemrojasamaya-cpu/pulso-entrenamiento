@@ -288,6 +288,15 @@ function pintar(avisos = []) {
           <button class="${rutina.lugar === "casa" ? "on" : ""}"
                   onclick="cambiarLugar('casa')">Hoy entreno en casa</button>
         </div>` : ""}
+
+      ${rutina.ejercicios.length > 0 && hechas < rutina.ejercicios.length ? `
+        <a class="btn" href="/sesion.html" style="display:block; text-align:center; margin-top:16px">
+          ${hechas === 0 ? "Entrenar con cronómetro" : "Seguir con cronómetro"}
+        </a>
+        <p style="font-size:11.5px; color:var(--tx3); text-align:center; margin-top:8px; line-height:1.5">
+          Pantalla completa, un ejercicio a la vez, con descansos y alarma.
+          Acá abajo podés anotar a mano si preferís.
+        </p>` : ""}
     </div>
 
     ${pintarGlosario(rutina)}
