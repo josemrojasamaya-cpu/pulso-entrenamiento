@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131920">
+<title>Forja · Perfil</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+.seccion{margin-bottom:20px}
+.seccion>h2{font-size:15px; font-weight:650; margin-bottom:4px}
+.seccion>p.ayuda{font-size:13px; color:var(--tx2); margin-bottom:13px; line-height:1.55}
+.limites{
+  background:var(--gr-850); border:1px solid var(--borde);
+  border-radius:10px; padding:14px 16px; margin-top:14px; font-size:13px; line-height:1.65;
+}
+.limites b{color:var(--tx); display:block; margin-bottom:6px; font-size:12px;
+  text-transform:uppercase; letter-spacing:.5px}
+.limites ul{margin:8px 0 0 18px; color:var(--tx2)}
+.limites li{margin-bottom:4px}
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="pagina">
+  <div class="titulo">
+    <h1>Tu perfil</h1>
+    <p>De acá salen todas las decisiones del sistema. Vale la pena que esté al día.</p>
+  </div>
+  <div id="contenido"><div class="cargando">Cargando…</div></div>
+</main>
+
+<nav class="tabs" id="tabs"></nav>
+
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const usuario = Sesion.exigir();
+let perfil = null, condicionesActivas = [], catalogoCond = [];
+
+const EQUIPOS = [
+  ["peso_corporal","Peso corporal"], ["mancuernas","Mancuernas"], ["barra","Barra"],
+  ["maquina","Máquinas"], ["polea","Poleas"], ["banda","Bandas elásticas"], ["kettlebell","Kettlebell"]
+];
+
+async function cargar() {
+  pintarEstructura("perfil");
+  try {
+    const [datos, catalogo] = await Promise.all([
+      api(`/atleta/${usuario.id}/perfil`),
+      api("/atleta/condiciones/catalogo")
+    ]);
+    perfil = datos.perfil || {};
+    condicionesActivas = (datos.condiciones || []).map(c => c.codigo);
+    catalogoCond = catalogo;
+    pintar(datos.limites);
+  } catch (err) {
+    document.getElementById("contenido").innerHTML =
+      `<div class="aviso ${err.sinRed ? "alerta" : "mal"}">${esc(err.message)}</div>`;
+  }
+}
+
+function pintar(limites) {
+  const equipo = Array.isArray(perfil.equipo) ? perfil.equipo : ["peso_corporal"];
+
+  document.getElementById("contenido").innerHTML = `
+    <div class="tarjeta" style="margin-bottom:16px"><div class="t-cu">
+      <div class="seccion">
+        <h2>Qué buscás</h2>
+        <p class="ayuda">Define el rango de repeticiones, las series y el descanso de cada sesión.</p>
+        <label class="campo"><span>Objetivo</span>
+          <select id="p-objetivo">
+            ${Object.entries(NOMBRE_OBJETIVO).map(([v,t]) =>
+              `<option value="${v}" ${perfil.objetivo===v?"selected":""}>${t}</option>`).join("")}
+          </select>
+        </label>
+        <label class="campo"><span>Tu nivel</span>
+          <select id="p-nivel">
+            <option value="principiante" ${perfil.nivel==="principiante"?"selected":""}>Principiante — menos de 6 meses entrenando</option>
+            <option value="intermedio"   ${perfil.nivel==="intermedio"?"selected":""}>Intermedio — de 6 meses a 2 años</option>
+            <option value="avanzado"     ${perfil.nivel==="avanzado"?"selected":""}>Avanzado — más de 2 años sostenidos</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="seccion">
+        <h2>Cuánto podés entrenar</h2>
+        <p class="ayuda">Con pocos días conviene cuerpo completo; con muchos, repartir por grupos. El sistema lo decide con esto.</p>
+        <div class="rejilla r-2">
+          <label class="campo"><span>Días por semana</span>
+            <select id="p-dias">
+              ${[1,2,3,4,5,6,7].map(d => `<option value="${d}" ${perfil.dias_por_semana===d?"selected":""}>${d} día${d>1?"s":""}</option>`).join("")}
+            </select>
+          </label>
+          <label class="campo"><span>Minutos por sesión</span>
+            <select id="p-minutos">
+              ${[20,30,45,60,75,90].map(m => `<option value="${m}" ${perfil.minutos_sesion===m?"selected":""}>${m} minutos</option>`).join("")}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="seccion">
+        <h2>Qué equipo tenés a mano</h2>
+        <p class="ayuda">Sólo se van a proponer ejercicios que puedas hacer de verdad. Marcar equipo que no tenés es la forma más rápida de terminar con una rutina inservible.</p>
+        <div class="fichas" id="fichas-equipo">
+          ${EQUIPOS.map(([v,t]) => `
+            <label class="ficha ${equipo.includes(v)?"on":""}">
+              <input type="checkbox" value="${v}" ${equipo.includes(v)?"checked":""}
+                     onchange="this.closest('.ficha').classList.toggle('on', this.checked)">
+              ${t}
+            </label>`).join("")}
+        </div>
+      </div>
+
+      <div class="seccion">
+        <h2>Datos físicos</h2>
+        <div class="rejilla r-2">
+          <label class="campo"><span>Altura (cm)</span>
+            <input type="number" id="p-altura" value="${perfil.altura_cm ?? ""}" placeholder="175"></label>
+          <label class="campo"><span>Fecha de nacimiento</span>
+            <input type="date" id="p-nac" value="${perfil.fecha_nacimiento ? String(perfil.fecha_nacimiento).slice(0,10) : ""}"></label>
+        </div>
+        <label class="campo"><span>Sexo</span>
+          <select id="p-sexo">
+            <option value="">Prefiero no decirlo</option>
+            <option ${perfil.sexo==="Femenino"?"selected":""}>Femenino</option>
+            <option ${perfil.sexo==="Masculino"?"selected":""}>Masculino</option>
+          </select>
+        </label>
+      </div>
+
+      <button class="btn grande" onclick="guardarPerfil()">Guardar perfil</button>
+      <div id="msg-perfil" style="margin-top:12px"></div>
+    </div></div>
+
+    <div class="tarjeta"><div class="t-cu">
+      <div class="seccion">
+        <h2>Condiciones de salud</h2>
+        <p class="ayuda">
+          Esto es lo más importante de esta pantalla. Determina qué ejercicios quedan excluidos,
+          cuánta carga como máximo y qué avisos vas a ver antes de entrenar.
+          Si no aplica ninguna, dejalo vacío.
+        </p>
+        <div class="fichas" id="fichas-cond">
+          ${catalogoCond.map(c => `
+            <label class="ficha ${condicionesActivas.includes(c.codigo)?"on":""}">
+              <input type="checkbox" value="${c.codigo}" ${condicionesActivas.includes(c.codigo)?"checked":""}
+                     onchange="this.closest('.ficha').classList.toggle('on', this.checked)">
+              ${esc(c.nombre)}
+            </label>`).join("")}
+        </div>
+
+        <div class="aviso alerta" style="margin-top:16px">
+          Esto no reemplaza a tu médico. El sistema aplica criterios generales de seguridad;
+          si tenés una condición importante, que un profesional autorice tu plan antes de empezar.
+        </div>
+
+        <div id="limites">${pintarLimites(limites)}</div>
+
+        <button class="btn grande" onclick="guardarCondiciones()" style="margin-top:14px">Guardar condiciones</button>
+        <div id="msg-cond" style="margin-top:12px"></div>
+      </div>
+    </div></div>`;
+}
+
+function pintarLimites(l) {
+  if (!l || !l.condiciones || l.condiciones.length === 0) {
+    return `<div class="limites">
+      <b>Sin restricciones activas</b>
+      Se aplican los rangos normales de tu objetivo, sin topes de intensidad.
+    </div>`;
+  }
+  return `<div class="limites">
+    <b>Cómo queda tu entrenamiento</b>
+    Por ${l.condiciones.map(c=>esc(c.nombre)).join(" y ")}:
+    <ul>
+      <li>Intensidad topada al <strong style="color:var(--tx)">${Math.round(l.intensidadMax*100)}%</strong> de tu carga máxima estimada.</li>
+      <li>Repeticiones desde <strong style="color:var(--tx)">${l.repMin}</strong> hacia arriba, para bajar la carga por repetición.</li>
+      <li>Descanso mínimo de <strong style="color:var(--tx)">${l.descansoMin} segundos</strong> entre series.</li>
+      ${l.sinImpacto ? "<li>Sin saltos ni carrera.</li>" : ""}
+      ${l.evitarPatrones.length ? `<li>Se excluyen los patrones: ${l.evitarPatrones.join(", ")}.</li>` : ""}
+      <li>Vas a ver <strong style="color:var(--tx)">${l.avisos.length} avisos</strong> de seguridad antes de cada sesión.</li>
+    </ul>
+  </div>`;
+}
+
+function marcados(contenedor) {
+  return [...document.querySelectorAll(`#${contenedor} input:checked`)].map(i => i.value);
+}
+
+async function guardarPerfil() {
+  const equipo = marcados("fichas-equipo");
+  if (equipo.length === 0) {
+    document.getElementById("msg-perfil").innerHTML =
+      `<div class="aviso mal">Marcá al menos una opción de equipo. Con sólo peso corporal ya alcanza.</div>`;
+    return;
+  }
+
+  const cuerpo = {
+    objetivo: document.getElementById("p-objetivo").value,
+    nivel: document.getElementById("p-nivel").value,
+    dias_por_semana: Number(document.getElementById("p-dias").value),
+    minutos_sesion: Number(document.getElementById("p-minutos").value),
+    equipo,
+    altura_cm: document.getElementById("p-altura").value || null,
+    fecha_nacimiento: document.getElementById("p-nac").value || null,
+    sexo: document.getElementById("p-sexo").value || null
+  };
+
+  try {
+    await api(`/atleta/${usuario.id}/perfil`, { method:"PUT", body: cuerpo });
+    document.getElementById("msg-perfil").innerHTML =
+      `<div class="aviso ok">Perfil guardado. La rutina de mañana ya sale con estos datos.</div>`;
+  } catch (err) {
+    document.getElementById("msg-perfil").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+async function guardarCondiciones() {
+  try {
+    const r = await api(`/atleta/${usuario.id}/condiciones`, {
+      method:"PUT", body: { condiciones: marcados("fichas-cond") }
+    });
+    document.getElementById("limites").innerHTML = pintarLimites(r.limites);
+    document.getElementById("msg-cond").innerHTML =
+      `<div class="aviso ok">Condiciones guardadas. Los ejercicios contraindicados dejan de aparecer desde la próxima rutina.</div>`;
+  } catch (err) {
+    document.getElementById("msg-cond").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+cargar();
+</script>
+</body>
+</html>

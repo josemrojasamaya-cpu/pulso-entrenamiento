@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Forja</title>
+<script>
+  try {
+    var t = localStorage.getItem("forja_token");
+    var u = JSON.parse(localStorage.getItem("forja_usuario") || "null");
+    var destino = !t || !u ? "login.html"
+                : (u.rol === "entrenador" || u.rol === "admin") ? "entrenador.html"
+                : "hoy.html";
+    location.replace(destino);
+  } catch (e) { location.replace("login.html"); }
+</script>
+<meta http-equiv="refresh" content="0; url=login.html">
+</head>
+<body><p style="font-family:system-ui;padding:24px">Redirigiendo… <a href="login.html">Entrar</a></p></body>
+</html>

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131920">
+<title>Forja · Hoy</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+.cabecera-dia{
+  background:linear-gradient(160deg,var(--gr-850),var(--sup));
+  border:1px solid var(--borde); border-radius:var(--radio);
+  padding:20px; margin-bottom:16px;
+}
+.cabecera-dia .fecha{font-size:12.5px; color:var(--tx3); text-transform:capitalize; margin-bottom:5px}
+.cabecera-dia h1{font-size:23px; font-weight:750; letter-spacing:-.5px; line-height:1.2}
+.cabecera-dia .datos{display:flex; gap:16px; margin-top:12px; flex-wrap:wrap}
+.cabecera-dia .datos div{font-size:13px; color:var(--tx2)}
+.cabecera-dia .datos b{color:var(--tx); font-weight:650}
+
+.ejercicio{
+  background:var(--sup); border:1px solid var(--borde); border-radius:var(--radio);
+  margin-bottom:11px; overflow:hidden;
+}
+.ej-cab{display:flex; align-items:center; gap:13px; padding:15px 16px; cursor:pointer}
+.ej-num{
+  width:30px; height:30px; border-radius:9px; flex:none; display:grid; place-items:center;
+  background:var(--gr-750); color:var(--tx2); font-size:13px; font-weight:700;
+}
+.ejercicio.listo .ej-num{background:var(--ok-tenue); color:var(--ok)}
+.ej-info{flex:1; min-width:0}
+.ej-info b{display:block; font-size:15px; font-weight:650; line-height:1.3}
+.ej-info span{font-size:12.5px; color:var(--tx2)}
+.ej-peso{
+  text-align:right; flex:none;
+  font-size:17px; font-weight:750; font-variant-numeric:tabular-nums;
+}
+.ej-peso small{display:block; font-size:11px; font-weight:500; color:var(--tx3)}
+
+.ej-cuerpo{display:none; padding:0 16px 16px; border-top:1px solid var(--borde)}
+.ejercicio.abierto .ej-cuerpo{display:block}
+.instruccion{
+  font-size:13.5px; color:var(--tx2); line-height:1.6;
+  padding:13px 0; border-bottom:1px solid var(--borde); margin-bottom:13px;
+}
+.video-link{
+  display:inline-flex; align-items:center; gap:7px; font-size:13px;
+  color:var(--az); text-decoration:none; font-weight:600; margin-top:8px;
+}
+.video-link svg{width:16px; height:16px}
+
+.series-lista{display:flex; flex-direction:column; gap:8px}
+.serie-fila{
+  display:grid; grid-template-columns:34px 1fr 1fr 64px auto; gap:8px; align-items:center;
+}
+.serie-fila .n{font-size:12.5px; color:var(--tx3); font-weight:650}
+.serie-fila input{padding:9px 10px; font-size:15px; text-align:center}
+.serie-fila.hecha{opacity:.55}
+.serie-fila.hecha input{background:var(--gr-800); border-color:var(--gr-700)}
+.mini-cab{
+  display:grid; grid-template-columns:34px 1fr 1fr 64px auto; gap:8px;
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.5px;
+  color:var(--tx3); font-weight:700; margin-bottom:6px; padding:0 2px;
+}
+.btn-serie{
+  padding:9px 11px; border-radius:9px; border:1px solid var(--borde);
+  background:var(--gr-750); color:var(--tx2); cursor:pointer; font:inherit;
+  font-size:13px; font-weight:650; white-space:nowrap;
+}
+.btn-serie:hover{border-color:var(--az); color:var(--az)}
+.btn-serie.hecha{background:var(--ok-tenue); border-color:#1d4536; color:var(--ok)}
+
+.descanso{
+  position:fixed; inset:0; background:rgba(6,9,12,.94); z-index:200;
+  display:none; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+}
+.descanso.visible{display:flex}
+.descanso .n{font-size:76px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-3px}
+.descanso .t{font-size:14px; color:var(--tx2); text-transform:uppercase; letter-spacing:2px}
+.descanso .acciones{display:flex; gap:10px}
+
+.avisos-salud{margin-bottom:16px}
+.porque{
+  font-size:12.5px; color:var(--tx3); line-height:1.6;
+  background:var(--gr-850); border:1px solid var(--borde);
+  border-radius:10px; padding:13px 15px; margin-top:14px;
+}
+.porque b{color:var(--tx2); display:block; margin-bottom:5px; font-size:12px;
+  text-transform:uppercase; letter-spacing:.5px}
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="pagina" id="vista">
+  <div class="cargando">Preparando tu rutina…</div>
+</main>
+
+<nav class="tabs" id="tabs"></nav>
+
+<!-- Cronómetro de descanso -->
+<div class="descanso" id="descanso">
+  <div class="t">Descanso</div>
+  <div class="n" id="cuenta">90</div>
+  <div class="acciones">
+    <button class="btn sec" onclick="sumarDescanso(30)">+30 s</button>
+    <button class="btn" onclick="cerrarDescanso()">Seguir</button>
+  </div>
+</div>
+
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const usuario = Sesion.exigir();
+const vista = document.getElementById("vista");
+let rutina = null;
+let sinRed = false;
+
+async function cargar() {
+  pintarEstructura("hoy");
+  const fecha = hoyISO();
+
+  try {
+    const r = await api(`/entrenamiento/dia/${fecha}`);
+    rutina = r.rutina;
+    sinRed = Boolean(r._desdeCache);
+    if (rutina) await Almacen.guardarRutina(rutina);
+    pintar(r.avisos);
+
+    // Se deja descargada la de mañana: cuando la persona llegue al
+    // gimnasio sin señal, ya la va a tener.
+    descargarPaquete();
+
+  } catch (err) {
+    if (err.sinRed) {
+      // Sin conexión: se usa lo que quedó guardado en el teléfono.
+      const guardada = await Almacen.rutinaDe(fecha);
+      if (guardada) {
+        rutina = guardada; sinRed = true;
+        const avisos = await Almacen.leerDato("avisos_salud");
+        pintar(avisos || []);
+        return;
+      }
+      vista.innerHTML = `<div class="aviso alerta">
+        <b>Sin conexión y sin rutina guardada</b>
+        No se alcanzó a descargar la rutina de hoy. Conectate un momento y volvé a abrir.
+      </div>`;
+      return;
+    }
+
+    if (err.message && /perfil/i.test(err.message)) {
+      vista.innerHTML = `<div class="aviso info">
+        <b>Falta completar tu perfil</b>
+        Sin saber tu objetivo, tu nivel y el equipo que tenés, no se puede armar una rutina que sirva.
+      </div>
+      <a href="perfil.html" class="btn grande" style="margin-top:14px">Completar mi perfil</a>`;
+      return;
+    }
+
+    vista.innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+async function descargarPaquete() {
+  try {
+    const p = await api("/entrenamiento/paquete?dias=3");
+    await Almacen.guardarPaquete(p);
+    await Almacen.limpiarViejas();
+  } catch { /* si falla, se reintenta la próxima vez que abra */ }
+}
+
+function pintar(avisos = []) {
+  const completada = rutina.estado === "completada";
+  const hechas = rutina.ejercicios.filter(e => (e.realizadas || []).length >= e.series).length;
+
+  vista.innerHTML = `
+    ${sinRed ? `<div class="aviso alerta" style="margin-bottom:14px">
+      <b>Modo sin conexión</b>
+      Estás viendo la rutina guardada en el teléfono. Lo que registres se envía solo cuando vuelva la señal.
+    </div>` : ""}
+
+    <div class="cabecera-dia">
+      <div class="fecha">${diaSemana(rutina.fecha)} ${fecha(rutina.fecha)}</div>
+      <h1>${esc(rutina.nombre)}</h1>
+      <div class="datos">
+        <div><b>${rutina.ejercicios.length}</b> ejercicios</div>
+        <div><b>${rutina.minutos_estimados}</b> min estimados</div>
+        <div><b>${hechas}/${rutina.ejercicios.length}</b> completados</div>
+      </div>
+    </div>
+
+    ${avisos && avisos.length ? `
+      <div class="avisos-salud">
+        ${avisos.map(a => `<div class="aviso alerta">
+          <b>${esc(a.condicion || "Atención")}</b>${esc(a.texto || a)}
+        </div>`).join("")}
+      </div>` : ""}
+
+    <div id="lista">
+      ${rutina.ejercicios.map((e, i) => pintarEjercicio(e, i)).join("")}
+    </div>
+
+    ${rutina.justificacion ? pintarPorque(rutina.justificacion) : ""}
+
+    <button class="btn grande ${completada ? "sec" : "ok"}" id="btn-fin"
+            style="margin-top:18px" onclick="terminar()" ${completada ? "disabled" : ""}>
+      ${completada ? "Sesión completada" : "Terminar sesión"}
+    </button>`;
+}
+
+function pintarEjercicio(e, i) {
+  const realizadas = e.realizadas || [];
+  const listo = realizadas.length >= e.series;
+  const esTiempo = e.medida === "segundos" || e.medida === "minutos";
+
+  return `
+    <div class="ejercicio ${listo ? "listo" : ""}" id="ej-${e.id}">
+      <div class="ej-cab" onclick="alternar(${e.id})">
+        <div class="ej-num">${listo ? "✓" : i + 1}</div>
+        <div class="ej-info">
+          <b>${esc(e.nombre)}</b>
+          <span>${formatoSerie(e)} · ${NOMBRE_GRUPO[e.grupo] || e.grupo}</span>
+        </div>
+        ${e.peso_sugerido_kg ? `<div class="ej-peso">${e.peso_sugerido_kg}<small>kg</small></div>` : ""}
+      </div>
+
+      <div class="ej-cuerpo">
+        ${e.instrucciones ? `<div class="instruccion">${esc(e.instrucciones)}</div>` : ""}
+        ${e.nota ? `<div class="instruccion" style="border:none; padding-top:0">${esc(e.nota)}</div>` : ""}
+
+        ${esTiempo ? "" : `
+          <div class="mini-cab">
+            <div>#</div><div>Peso (kg)</div><div>Reps</div><div>RPE</div><div></div>
+          </div>`}
+
+        <div class="series-lista">
+          ${Array.from({ length: e.series }, (_, s) => {
+            const hecha = realizadas.find(r => r.serie_num === s + 1);
+            return pintarSerie(e, s + 1, hecha, esTiempo);
+          }).join("")}
+        </div>
+
+        <a class="video-link" href="${esc(e.video)}" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/>
+          </svg>
+          Ver cómo se hace
+        </a>
+      </div>
+    </div>`;
+}
+
+function pintarSerie(e, num, hecha, esTiempo) {
+  const idPeso = `p-${e.id}-${num}`, idReps = `r-${e.id}-${num}`, idRpe = `e-${e.id}-${num}`;
+  const unidad = e.medida === "segundos" ? "seg" : e.medida === "minutos" ? "min" : "";
+
+  if (esTiempo) {
+    return `
+      <div class="serie-fila ${hecha ? "hecha" : ""}" style="grid-template-columns:34px 1fr 64px auto">
+        <div class="n">${num}</div>
+        <input type="number" inputmode="numeric" id="${idReps}"
+               value="${hecha ? hecha.repeticiones : e.rep_min}" placeholder="${unidad}"
+               ${hecha ? "disabled" : ""}>
+        <input type="number" inputmode="decimal" id="${idRpe}" step="0.5" min="1" max="10"
+               value="${hecha && hecha.rpe ? hecha.rpe : ""}" placeholder="RPE" ${hecha ? "disabled" : ""}>
+        <button class="btn-serie ${hecha ? "hecha" : ""}" id="b-${e.id}-${num}"
+                onclick="registrar(${e.id}, ${e.ejercicio_id}, ${num}, ${e.descanso_seg})"
+                ${hecha ? "disabled" : ""}>${hecha ? "✓" : "Listo"}</button>
+      </div>`;
+  }
+
+  return `
+    <div class="serie-fila ${hecha ? "hecha" : ""}">
+      <div class="n">${num}</div>
+      <input type="number" inputmode="decimal" id="${idPeso}" step="0.5" min="0"
+             value="${hecha ? hecha.peso_kg : (e.peso_sugerido_kg ?? "")}"
+             placeholder="kg" ${hecha ? "disabled" : ""}>
+      <input type="number" inputmode="numeric" id="${idReps}" min="1"
+             value="${hecha ? hecha.repeticiones : ""}"
+             placeholder="${e.rep_min}-${e.rep_max}" ${hecha ? "disabled" : ""}>
+      <input type="number" inputmode="decimal" id="${idRpe}" step="0.5" min="1" max="10"
+             value="${hecha && hecha.rpe ? hecha.rpe : ""}" placeholder="—" ${hecha ? "disabled" : ""}>
+      <button class="btn-serie ${hecha ? "hecha" : ""}" id="b-${e.id}-${num}"
+              onclick="registrar(${e.id}, ${e.ejercicio_id}, ${num}, ${e.descanso_seg})"
+              ${hecha ? "disabled" : ""}>${hecha ? "✓" : "Listo"}</button>
+    </div>`;
+}
+
+function pintarPorque(j) {
+  const cond = (j.condiciones || []).map(c => c.nombre).join(", ");
+  return `
+    <div class="porque">
+      <b>Por qué esta rutina</b>
+      Objetivo <strong style="color:var(--tx)">${esc(j.objetivo)}</strong>, nivel ${esc(j.nivel)}.
+      ${esc(j.razon_objetivo || "")}
+      Se trabaja en ${esc(j.repeticiones)} repeticiones con ${j.descanso_seg} segundos de descanso.
+      ${cond ? `Ajustada por: <strong style="color:var(--tx)">${esc(cond)}</strong>,
+        con la intensidad topada al ${j.intensidad_max_pct}% de tu carga máxima.
+        Se descartaron ${j.ejercicios_descartados} ejercicios del catálogo.` : ""}
+      ${(j.recortados_por_tiempo || []).length
+        ? ` Se quitó ${esc(j.recortados_por_tiempo.join(", "))} para que entre en tu tiempo disponible.` : ""}
+    </div>`;
+}
+
+function alternar(id) {
+  document.getElementById("ej-" + id).classList.toggle("abierto");
+}
+
+/**
+ * Registra una serie.
+ *
+ * Guarda primero en el teléfono y después intenta enviar. Así, si se
+ * corta la señal justo en ese momento, el dato ya está a salvo: nadie
+ * recuerda después cuántas repeticiones hizo en la tercera serie.
+ */
+async function registrar(rutinaEjercicioId, ejercicioId, num, descansoSeg) {
+  const ej = rutina.ejercicios.find(e => e.id === rutinaEjercicioId);
+  const esTiempo = ej.medida === "segundos" || ej.medida === "minutos";
+
+  const reps = Number(document.getElementById(`r-${rutinaEjercicioId}-${num}`).value);
+  const peso = esTiempo ? 0 : Number(document.getElementById(`p-${rutinaEjercicioId}-${num}`).value || 0);
+  const rpeCampo = document.getElementById(`e-${rutinaEjercicioId}-${num}`).value;
+  const rpe = rpeCampo === "" ? null : Number(rpeCampo);
+
+  if (!reps || reps < 1) {
+    alert(esTiempo ? "Anotá cuántos segundos sostuviste." : "Anotá cuántas repeticiones hiciste.");
+    return;
+  }
+
+  await Almacen.guardarSerie({
+    ejercicio_id: ejercicioId,
+    rutina_ejercicio_id: rutinaEjercicioId,
+    serie_num: num,
+    repeticiones: reps,
+    peso_kg: peso,
+    rpe
+  });
+
+  // Se marca en pantalla de inmediato: la confirmación no depende de que
+  // el servidor conteste.
+  const boton = document.getElementById(`b-${rutinaEjercicioId}-${num}`);
+  boton.classList.add("hecha"); boton.textContent = "✓"; boton.disabled = true;
+  boton.closest(".serie-fila").classList.add("hecha");
+  boton.closest(".serie-fila").querySelectorAll("input").forEach(i => i.disabled = true);
+
+  ej.realizadas = ej.realizadas || [];
+  ej.realizadas.push({ serie_num: num, repeticiones: reps, peso_kg: peso, rpe });
+
+  if (ej.realizadas.length >= ej.series) {
+    document.getElementById("ej-" + rutinaEjercicioId).classList.add("listo");
+    document.querySelector(`#ej-${rutinaEjercicioId} .ej-num`).textContent = "✓";
+  }
+
+  if (descansoSeg > 0) abrirDescanso(descansoSeg);
+}
+
+/* ── Cronómetro de descanso ───────────────────────────────────────── */
+let temporizador = null, restante = 0;
+
+function abrirDescanso(segundos) {
+  restante = segundos;
+  document.getElementById("cuenta").textContent = restante;
+  document.getElementById("descanso").classList.add("visible");
+
+  clearInterval(temporizador);
+  temporizador = setInterval(() => {
+    restante--;
+    document.getElementById("cuenta").textContent = Math.max(0, restante);
+    if (restante <= 0) {
+      clearInterval(temporizador);
+      // Vibración corta: en el gimnasio el teléfono suele estar en
+      // silencio y con música puesta.
+      if (navigator.vibrate) navigator.vibrate([180, 90, 180]);
+      setTimeout(cerrarDescanso, 1200);
+    }
+  }, 1000);
+}
+function sumarDescanso(s){ restante += s; document.getElementById("cuenta").textContent = restante; }
+function cerrarDescanso(){
+  clearInterval(temporizador);
+  document.getElementById("descanso").classList.remove("visible");
+}
+
+async function terminar() {
+  const btn = document.getElementById("btn-fin");
+  btn.disabled = true; btn.textContent = "Guardando…";
+  try {
+    await Almacen.sincronizar().catch(() => {});
+    await api(`/entrenamiento/rutina/${rutina.id}/estado`, {
+      method: "POST", body: { estado: "completada" }
+    });
+    btn.textContent = "Sesión completada"; btn.classList.remove("ok"); btn.classList.add("sec");
+    mostrarNivel();
+  } catch (err) {
+    if (err.sinRed) {
+      btn.textContent = "Se marcará al recuperar señal";
+      return;
+    }
+    btn.disabled = false; btn.textContent = "Terminar sesión";
+    alert(err.message);
+  }
+}
+
+cargar();
+</script>
+</body>
+</html>

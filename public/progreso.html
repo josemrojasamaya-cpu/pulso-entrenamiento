@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131920">
+<title>Forja · Progreso</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+.barras{display:flex; align-items:flex-end; gap:5px; height:130px; padding-top:10px}
+.barra{flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:5px; height:100%}
+.barra .col{
+  width:100%; background:linear-gradient(180deg,var(--az),var(--az-3));
+  border-radius:5px 5px 0 0; min-height:3px; transition:.3s;
+}
+.barra .et{font-size:9.5px; color:var(--tx3); white-space:nowrap}
+.marca-fila{
+  display:flex; align-items:center; gap:12px; padding:11px 0;
+  border-bottom:1px solid var(--borde);
+}
+.marca-fila:last-child{border-bottom:none}
+.marca-fila .rm{
+  font-size:17px; font-weight:750; width:70px; flex:none;
+  font-variant-numeric:tabular-nums; color:var(--az);
+}
+.marca-fila .rm small{font-size:11px; color:var(--tx3); font-weight:500}
+.nivel-barra{height:7px; background:var(--gr-750); border-radius:5px; overflow:hidden; margin-top:9px}
+.nivel-barra div{height:100%; background:linear-gradient(90deg,var(--az),#5fa0ea); border-radius:5px; transition:.4s}
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="pagina">
+  <div class="titulo">
+    <h1>Progreso</h1>
+    <p>Lo que responde si esto está funcionando.</p>
+  </div>
+  <div id="contenido"><div class="cargando">Cargando…</div></div>
+</main>
+
+<nav class="tabs" id="tabs"></nav>
+
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const usuario = Sesion.exigir();
+
+async function cargar() {
+  pintarEstructura("progreso");
+  try {
+    const r = await api(`/progreso/${usuario.id}/resumen`);
+    pintar(r);
+  } catch (err) {
+    document.getElementById("contenido").innerHTML =
+      `<div class="aviso ${err.sinRed ? "alerta" : "mal"}">${esc(err.message)}</div>`;
+  }
+}
+
+function pintar(r) {
+  const semanas = r.volumen_semanal || [];
+  const maxVol = Math.max(...semanas.map(s => s.volumen), 1);
+  const n = r.nivel;
+
+  document.getElementById("contenido").innerHTML = `
+    <div class="tarjeta" style="margin-bottom:16px"><div class="t-cu">
+      <div style="display:flex; align-items:baseline; gap:10px">
+        <div style="font-size:30px; font-weight:800; letter-spacing:-1px">Nivel ${n.nivel}</div>
+        <div style="font-size:15px; color:var(--az); font-weight:650">${esc(n.titulo)}</div>
+      </div>
+      <div class="nivel-barra"><div style="width:${n.progresoPct}%"></div></div>
+      <div style="font-size:12.5px; color:var(--tx2); margin-top:8px">
+        ${n.puntos} puntos${n.siguiente ? ` · te faltan ${n.faltan} para el nivel ${n.siguiente}` : " · nivel máximo alcanzado"}
+      </div>
+    </div></div>
+
+    <div class="metricas" style="margin-bottom:16px">
+      <div class="metrica">
+        <b>${r.totales.dias_entrenados}</b><span>Días entrenados</span>
+      </div>
+      <div class="metrica">
+        <b>${(r.totales.volumen_total/1000).toFixed(1)}<small style="font-size:14px;color:var(--tx3)"> t</small></b>
+        <span>Peso total movido</span>
+      </div>
+      <div class="metrica">
+        <b>${r.adherencia.porcentaje !== null ? r.adherencia.porcentaje + "%" : "—"}</b>
+        <span>Constancia (30 días)</span>
+      </div>
+      <div class="metrica">
+        <b>${r.totales.calorias_estimadas.toLocaleString("es")}</b>
+        <span>Calorías estimadas</span>
+      </div>
+    </div>
+
+    ${semanas.length > 1 ? `
+      <div class="tarjeta" style="margin-bottom:16px">
+        <div class="t-cab"><h2>Volumen por semana</h2>
+          <div class="der"><span class="eti gris">últimas ${semanas.length}</span></div>
+        </div>
+        <div class="t-cu">
+          <p style="font-size:12.5px; color:var(--tx2); margin-bottom:8px">
+            Series × repeticiones × peso. Es la medida más honesta de cuánto trabajo hiciste:
+            el peso máximo solo no permite comparar una semana con otra.
+          </p>
+          <div class="barras">
+            ${semanas.map(s => `
+              <div class="barra" title="${Math.round(s.volumen).toLocaleString('es')} kg · ${s.series} series">
+                <div class="col" style="height:${Math.max(3,(s.volumen/maxVol)*100)}%"></div>
+                <div class="et">${fecha(s.semana,false)}</div>
+              </div>`).join("")}
+          </div>
+        </div>
+      </div>` : ""}
+
+    ${(r.marcas || []).length ? `
+      <div class="tarjeta">
+        <div class="t-cab"><h2>Marcas personales</h2>
+          <div class="der"><span class="eti azul">carga máxima estimada</span></div>
+        </div>
+        <div class="t-cu">
+          <p style="font-size:12.5px; color:var(--tx2); margin-bottom:12px">
+            Estimadas con la fórmula de Epley a partir de tus mejores series. No hace falta
+            que llegues nunca a levantar ese peso: sirve para calcular cuánto poner hoy.
+          </p>
+          ${r.marcas.map(m => `
+            <div class="marca-fila">
+              <div class="rm">${Math.round(m.mejor_1rm)}<small> kg</small></div>
+              <div style="flex:1; min-width:0">
+                <div style="font-size:14px; font-weight:600">${esc(m.nombre)}</div>
+                <div style="font-size:12px; color:var(--tx3)">
+                  mejor serie: ${m.mejor_peso} kg × ${m.mejor_reps} · ${m.sesiones} series registradas
+                </div>
+              </div>
+              <span class="eti gris">${NOMBRE_GRUPO[m.grupo] || m.grupo}</span>
+            </div>`).join("")}
+        </div>
+      </div>` : `
+      <div class="tarjeta"><div class="vacio">
+        Todavía no hay marcas registradas.<br>
+        <span style="font-size:13px">Aparecen solas a medida que registres series con peso.</span>
+      </div></div>`}`;
+}
+
+cargar();
+</script>
+</body>
+</html>

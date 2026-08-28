@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131920">
+<title>Forja · Ranking</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+.puesto{
+  display:flex; align-items:center; gap:14px; padding:13px 16px;
+  border-bottom:1px solid var(--borde);
+}
+.puesto:last-child{border-bottom:none}
+.puesto.yo{background:var(--az-tenue)}
+.pos{
+  width:32px; height:32px; border-radius:10px; flex:none; display:grid; place-items:center;
+  background:var(--gr-750); font-size:13.5px; font-weight:750; color:var(--tx2);
+}
+.pos.oro    {background:#3a2f14; color:#e0b64a}
+.pos.plata  {background:#2b3138; color:#c3ced8}
+.pos.bronce {background:#33251a; color:#c98a54}
+.puesto .quien{flex:1; min-width:0}
+.puesto .quien b{display:block; font-size:15px; font-weight:650}
+.puesto .quien span{font-size:12.5px; color:var(--tx3)}
+.puesto .pts{text-align:right; flex:none}
+.puesto .pts b{display:block; font-size:16px; font-weight:750; font-variant-numeric:tabular-nums}
+.puesto .pts span{font-size:11px; color:var(--tx3)}
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="pagina">
+  <div class="titulo">
+    <h1>Ranking</h1>
+    <p>Por constancia, no por kilos.</p>
+  </div>
+
+  <div class="aviso info" style="margin-bottom:16px">
+    <b>Por qué no se ordena por peso levantado</b>
+    Un ranking por kilos lo gana siempre quien lleva diez años entrenando, y quien
+    empieza no tiene ninguna posibilidad. Acá los puntos se ganan apareciendo,
+    sosteniendo la racha y midiéndose: todos compiten por lo mismo.
+  </div>
+
+  <div id="contenido"><div class="cargando">Cargando…</div></div>
+</main>
+
+<nav class="tabs" id="tabs"></nav>
+
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const usuario = Sesion.exigir();
+
+async function cargar() {
+  pintarEstructura("ranking");
+  try {
+    const r = await api("/progreso/ranking");
+    pintar(r);
+  } catch (err) {
+    document.getElementById("contenido").innerHTML =
+      `<div class="aviso ${err.sinRed ? "alerta" : "mal"}">${esc(err.message)}</div>`;
+  }
+}
+
+function pintar(r) {
+  const tabla = r.tabla || [];
+  if (tabla.length === 0) {
+    document.getElementById("contenido").innerHTML =
+      `<div class="tarjeta"><div class="vacio">Todavía no hay nadie en la tabla.</div></div>`;
+    return;
+  }
+
+  const medalla = p => p === 1 ? "oro" : p === 2 ? "plata" : p === 3 ? "bronce" : "";
+
+  document.getElementById("contenido").innerHTML = `
+    ${r.mi_posicion ? `
+      <div class="metricas" style="margin-bottom:16px">
+        <div class="metrica"><b>#${r.mi_posicion.posicion}</b><span>Tu posición</span></div>
+        <div class="metrica"><b>${r.mi_posicion.puntos}</b><span>Tus puntos</span></div>
+        <div class="metrica"><b>${r.mi_posicion.sesiones}</b><span>Sesiones</span></div>
+      </div>` : ""}
+
+    <div class="tarjeta">
+      <div class="t-cab"><h2>Tabla general</h2></div>
+      ${tabla.map(f => `
+        <div class="puesto ${f.soy_yo ? "yo" : ""}">
+          <div class="pos ${medalla(f.posicion)}">${f.posicion}</div>
+          <div class="quien">
+            <b>${esc(f.nombre)}${f.soy_yo ? " · vos" : ""}</b>
+            <span>Nivel ${f.nivel} · ${esc(f.titulo)} · ${f.sesiones} sesiones · ${f.dias_activos} días activos</span>
+          </div>
+          <div class="pts"><b>${f.puntos}</b><span>puntos</span></div>
+        </div>`).join("")}
+    </div>
+
+    <div class="tarjeta" style="margin-top:16px">
+      <div class="t-cab"><h2>Cómo se ganan los puntos</h2></div>
+      <div class="t-cu" style="font-size:13.5px; color:var(--tx2); line-height:1.9">
+        Sesión completada · <b style="color:var(--tx)">50</b><br>
+        Marca personal nueva · <b style="color:var(--tx)">75</b><br>
+        Medición corporal registrada · <b style="color:var(--tx)">40</b><br>
+        Semana completa según tu plan · <b style="color:var(--tx)">100</b><br>
+        Un mes sin faltar · <b style="color:var(--tx)">250</b>
+      </div>
+    </div>`;
+}
+
+cargar();
+</script>
+</body>
+</html>

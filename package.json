@@ -1,0 +1,20 @@
+{
+  "name": "forja-entrenamiento",
+  "version": "1.0.0",
+  "description": "Entrenador adaptativo: genera la rutina de cada dia segun las medidas, las condiciones de salud y el objetivo de la persona. PWA instalable con trabajo sin conexion.",
+  "main": "app.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node app.js",
+    "setup": "node db/setup.js",
+    "pruebas": "node pruebas/correr.js"
+  },
+  "author": "Jose Miguel Rojas Amaya",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.20.0"
+  }
+}

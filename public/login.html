@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131920">
+<title>Forja · Entrar</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+body{padding-bottom:0; min-height:100dvh; display:flex; flex-direction:column}
+.hero{
+  padding:44px 22px 34px; text-align:center;
+  background:linear-gradient(170deg,var(--gr-850),var(--bg) 65%);
+  border-bottom:1px solid var(--borde);
+}
+.hero .logo{
+  width:56px; height:56px; border-radius:16px; margin:0 auto 18px;
+  background:linear-gradient(150deg,var(--az),var(--az-3));
+  display:grid; place-items:center; font-size:26px; font-weight:800; color:#fff;
+  box-shadow:0 8px 26px rgba(61,127,214,.28);
+}
+.hero h1{font-size:30px; font-weight:800; letter-spacing:-.9px; margin-bottom:9px}
+.hero p{color:var(--tx2); font-size:15px; max-width:400px; margin:0 auto; line-height:1.6}
+.puntos{
+  max-width:440px; margin:26px auto 0; display:flex; flex-direction:column; gap:13px;
+  text-align:left;
+}
+.punto{display:flex; gap:12px; align-items:flex-start}
+.punto .n{
+  width:26px; height:26px; border-radius:8px; flex:none; margin-top:1px;
+  background:var(--az-tenue); border:1px solid var(--az-3); color:var(--az);
+  display:grid; place-items:center; font-size:12px; font-weight:800;
+}
+.punto b{display:block; font-size:14px; font-weight:650; margin-bottom:1px}
+.punto span{font-size:13px; color:var(--tx2); line-height:1.5}
+
+.acceso{flex:1; display:flex; align-items:flex-start; justify-content:center; padding:30px 22px 44px}
+.caja{width:100%; max-width:360px}
+.caja h2{font-size:19px; font-weight:700; margin-bottom:18px}
+
+.demo{margin-top:24px; padding-top:20px; border-top:1px solid var(--borde)}
+.demo>b{display:block; font-size:11px; letter-spacing:.7px; text-transform:uppercase; color:var(--tx3); margin-bottom:5px}
+.demo>p{font-size:13px; color:var(--tx2); margin-bottom:13px; line-height:1.5}
+.demo-b{
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+  padding:12px 14px; border:1px solid var(--borde); border-radius:11px;
+  background:var(--sup); cursor:pointer; font:inherit; margin-bottom:8px; transition:.15s;
+}
+.demo-b:hover{border-color:var(--az); background:var(--az-tenue)}
+.demo-b .ico{
+  width:32px; height:32px; border-radius:9px; flex:none; display:grid; place-items:center;
+  background:var(--gr-750); color:var(--az); font-weight:800; font-size:13px;
+}
+.demo-b b{display:block; font-size:13.5px; font-weight:650; color:var(--tx)}
+.demo-b span{display:block; font-size:12px; color:var(--tx3); line-height:1.4}
+.pie{text-align:center; padding:22px; font-size:12.5px; color:var(--tx3); border-top:1px solid var(--borde)}
+.pie a{color:var(--tx2)}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="logo">F</div>
+  <h1>Forja</h1>
+  <p>Tu rutina de cada día, armada según tus medidas, tus condiciones de salud y tu objetivo.</p>
+
+  <div class="puntos">
+    <div class="punto">
+      <div class="n">1</div>
+      <div><b>No guarda rutinas: las arma</b>
+      <span>Cada día es distinto, calculado según lo que levantaste la última vez.</span></div>
+    </div>
+    <div class="punto">
+      <div class="n">2</div>
+      <div><b>Se adapta a tus condiciones</b>
+      <span>Hipertensión, diabetes, una lesión lumbar: los ejercicios contraindicados no aparecen.</span></div>
+    </div>
+    <div class="punto">
+      <div class="n">3</div>
+      <div><b>Funciona sin señal</b>
+      <span>Descarga la rutina antes de que salgas y guarda lo que registrás aunque el gimnasio no tenga internet.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="acceso">
+  <div class="caja">
+    <h2>Entrar</h2>
+    <form id="forma" novalidate>
+      <label class="campo"><span>Usuario</span>
+        <input type="text" id="usuario" autocomplete="username" autocapitalize="none" required autofocus>
+      </label>
+      <label class="campo"><span>Contraseña</span>
+        <input type="password" id="clave" autocomplete="current-password" required>
+      </label>
+      <button type="submit" class="btn grande" id="entrar">Entrar</button>
+    </form>
+
+    <div id="msg" style="margin-top:14px"></div>
+
+    <!-- Credenciales visibles a propósito: esto forma parte de un
+         portafolio y tiene que poder recorrerse sin pedir permiso. -->
+    <div class="demo">
+      <b>Acceso de demostración</b>
+      <p>Cuatro cuentas. Entrá con más de una: la rutina que genera para cada una es distinta.</p>
+
+      <button type="button" class="demo-b" onclick="entrarDemo('atleta')">
+        <div class="ico">KS</div>
+        <div><b>Kevin · sin condiciones</b><span>Progresión normal, pesos calculados sobre su historial</span></div>
+      </button>
+      <button type="button" class="demo-b" onclick="entrarDemo('hipertenso')">
+        <div class="ico">RJ</div>
+        <div><b>Rosa · hipertensión y diabetes</b><span>Intensidad topada al 70%, más repeticiones, 6 avisos</span></div>
+      </button>
+      <button type="button" class="demo-b" onclick="entrarDemo('lesionado')">
+        <div class="ico">DF</div>
+        <div><b>Diego · lesión lumbar</b><span>22 ejercicios excluidos, sin carga sobre la columna</span></div>
+      </button>
+      <button type="button" class="demo-b" onclick="entrarDemo('demo')">
+        <div class="ico">MH</div>
+        <div><b>Marco · entrenador</b><span>Ve el avance de sus tres atletas</span></div>
+      </button>
+    </div>
+  </div>
+</section>
+
+<div class="pie">
+  Sistema de demostración · datos ficticios<br>
+  Desarrollado por <a href="https://josemrojas.netlify.app">José Miguel Rojas Amaya</a>
+</div>
+
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const forma  = document.getElementById("forma");
+const btn    = document.getElementById("entrar");
+const msg    = document.getElementById("msg");
+const campos = [document.getElementById("usuario"), document.getElementById("clave")];
+
+function aviso(t, tipo){ msg.innerHTML = `<div class="aviso ${tipo}">${esc(t)}</div>`; }
+function ocupado(si){
+  btn.disabled = si;
+  btn.textContent = si ? "Verificando…" : "Entrar";
+  campos.forEach(c => c.disabled = si);
+}
+
+forma.addEventListener("submit", async e => {
+  e.preventDefault();
+  msg.innerHTML = "";
+  const username = campos[0].value.trim(), password = campos[1].value;
+  if (!username || !password) {
+    aviso("Completá usuario y contraseña.", "mal");
+    (username ? campos[1] : campos[0]).focus();
+    return;
+  }
+
+  ocupado(true);
+  try {
+    const res = await fetch("/api/login", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ username, password })
+    });
+    const d = await res.json().catch(() => ({}));
+
+    if (!res.ok || !d.token) {
+      aviso(d.message || "Usuario o contraseña incorrectos.", "mal");
+      campos[1].value = ""; campos[1].focus(); ocupado(false);
+      return;
+    }
+
+    Sesion.guardar(d.token, d.usuario);
+    location.href = d.usuario.rol === "entrenador" || d.usuario.rol === "admin"
+      ? "entrenador.html" : "hoy.html";
+
+  } catch {
+    aviso("No se pudo conectar. Si el servidor estaba dormido, esperá unos segundos y probá de nuevo.", "mal");
+    ocupado(false);
+  }
+});
+
+campos.forEach(c => c.addEventListener("input", () => { msg.innerHTML = ""; }));
+
+function entrarDemo(u){
+  campos[0].value = u;
+  campos[1].value = "demo1234";
+  forma.requestSubmit();
+}
+</script>
+</body>
+</html>

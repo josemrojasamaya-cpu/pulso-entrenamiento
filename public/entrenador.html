@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131920">
+<title>Forja · Mis atletas</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+body{padding-bottom:30px}
+.atleta{
+  background:var(--sup); border:1px solid var(--borde); border-radius:var(--radio);
+  padding:16px 17px; margin-bottom:12px;
+}
+.atleta-cab{display:flex; align-items:center; gap:13px; margin-bottom:13px}
+.ini{
+  width:42px; height:42px; border-radius:12px; flex:none; display:grid; place-items:center;
+  background:linear-gradient(150deg,var(--az),var(--az-3)); color:#fff;
+  font-weight:750; font-size:15px;
+}
+.atleta-cab .quien{flex:1; min-width:0}
+.atleta-cab .quien b{display:block; font-size:16px; font-weight:650}
+.atleta-cab .quien span{font-size:12.5px; color:var(--tx2)}
+.atleta-datos{display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:12px}
+.atleta-datos div span{display:block; font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.5px; color:var(--tx3); font-weight:700; margin-bottom:2px}
+.atleta-datos div b{font-size:14.5px; font-weight:650}
+.alerta-cond{
+  margin-top:12px; padding:9px 12px; border-radius:8px; font-size:12.5px;
+  background:var(--alerta-tenue); border:1px solid #4a3a1c; color:#e6bd7a;
+}
+.inactivo{background:var(--mal-tenue); border-color:#4a2523; color:#eda6a3}
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="pagina">
+  <div class="titulo">
+    <h1>Mis atletas</h1>
+    <p>Quién viene entrenando y quién se está cayendo del plan.</p>
+  </div>
+  <div id="contenido"><div class="cargando">Cargando…</div></div>
+</main>
+
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const usuario = Sesion.exigir();
+
+// El panel del entrenador no lleva la barra inferior de atleta: no
+// entrena desde acá, administra.
+const top = document.getElementById("top");
+top.innerHTML = `
+  <div class="top-in">
+    <a class="marca" href="entrenador.html"><div class="marca-i">F</div><b>Forja</b></a>
+    <div class="der">
+      <div class="usuario-chip"><span class="nombre">${esc(usuario.nombre)}</span>
+        <span class="nivel-pin">Entrenador</span></div>
+      <button class="salir" onclick="Sesion.cerrar()">Salir</button>
+    </div>
+  </div>`;
+
+async function cargar() {
+  try {
+    const atletas = await api("/progreso/mis-atletas");
+    pintar(atletas);
+  } catch (err) {
+    document.getElementById("contenido").innerHTML =
+      `<div class="aviso ${err.sinRed ? "alerta" : "mal"}">${esc(err.message)}</div>`;
+  }
+}
+
+function diasSin(fechaISO) {
+  if (!fechaISO) return null;
+  return Math.round((Date.now() - aFecha(fechaISO).getTime()) / 86400000);
+}
+
+function pintar(atletas) {
+  if (atletas.length === 0) {
+    document.getElementById("contenido").innerHTML =
+      `<div class="tarjeta"><div class="vacio">Todavía no tenés atletas asignados.</div></div>`;
+    return;
+  }
+
+  const inactivos = atletas.filter(a => (diasSin(a.ultimo_entreno) ?? 999) > 7).length;
+
+  document.getElementById("contenido").innerHTML = `
+    <div class="metricas" style="margin-bottom:18px">
+      <div class="metrica"><b>${atletas.length}</b><span>Atletas</span></div>
+      <div class="metrica"><b>${atletas.reduce((s,a)=>s+a.sesiones_mes,0)}</b><span>Sesiones este mes</span></div>
+      <div class="metrica">
+        <b style="${inactivos ? "color:var(--mal)" : ""}">${inactivos}</b>
+        <span>Sin entrenar hace +7 días</span>
+      </div>
+    </div>
+
+    ${atletas.map(a => {
+      const dias = diasSin(a.ultimo_entreno);
+      const iniciales = String(a.nombre).split(" ").map(p=>p[0]).slice(0,2).join("");
+      return `
+      <div class="atleta">
+        <div class="atleta-cab">
+          <div class="ini">${esc(iniciales.toUpperCase())}</div>
+          <div class="quien">
+            <b>${esc(a.nombre)}</b>
+            <span>${NOMBRE_OBJETIVO[a.objetivo] || "sin objetivo"} · ${esc(a.nivel || "—")} · ${a.dias_por_semana || "—"} días/semana</span>
+          </div>
+          <span class="eti azul">Nv ${a.nivel_juego.nivel}</span>
+        </div>
+
+        <div class="atleta-datos">
+          <div><span>Sesiones (30 d)</span><b>${a.sesiones_mes}</b></div>
+          <div><span>Puntos</span><b>${a.puntos}</b></div>
+          <div><span>Último entreno</span><b>${dias === null ? "nunca" : dias === 0 ? "hoy" : `hace ${dias} d`}</b></div>
+          <div><span>Última medición</span><b>${a.ultima_medicion ? relativo(a.ultima_medicion) : "nunca"}</b></div>
+        </div>
+
+        ${a.condiciones > 0 ? `<div class="alerta-cond">
+          ${a.condiciones} condición${a.condiciones===1?"":"es"} de salud registrada${a.condiciones===1?"":"s"}:
+          su rutina va con restricciones activas.
+        </div>` : ""}
+
+        ${dias !== null && dias > 7 ? `<div class="alerta-cond inactivo">
+          Sin entrenar hace ${dias} días. Puede ser buen momento para escribirle.
+        </div>` : ""}
+      </div>`;
+    }).join("")}`;
+}
+
+cargar();
+</script>
+</body>
+</html>

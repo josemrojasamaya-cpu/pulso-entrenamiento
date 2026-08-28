@@ -1,0 +1,308 @@
+-- =====================================================================
+--  Forja · esquema de base de datos
+--
+--  Idempotente: se puede correr sobre una base vacía o sobre una ya
+--  instalada sin perder datos.
+-- =====================================================================
+
+CREATE SCHEMA IF NOT EXISTS forja;
+SET search_path TO forja, public;
+
+
+-- ---------------------------------------------------------------------
+--  Cuentas
+--
+--  Un atleta puede tener entrenador o no. Si lo tiene, ese entrenador ve
+--  su progreso y puede ajustarle el plan; si no, el sistema es su
+--  entrenador. Las dos formas de uso conviven.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS usuarios (
+    id             SERIAL PRIMARY KEY,
+    username       VARCHAR(60)  NOT NULL UNIQUE,
+    password_hash  VARCHAR(200) NOT NULL,
+    rol            VARCHAR(20)  NOT NULL DEFAULT 'atleta',  -- admin | entrenador | atleta
+    entrenador_id  INTEGER REFERENCES usuarios(id),
+    nombre         VARCHAR(120) NOT NULL,
+    email          VARCHAR(160),
+    activo         BOOLEAN      NOT NULL DEFAULT TRUE,
+    ultimo_acceso  TIMESTAMPTZ,
+    creado_en      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_usr_entrenador ON usuarios (entrenador_id);
+
+
+-- ---------------------------------------------------------------------
+--  Perfil de entrenamiento
+--
+--  Es la entrada del motor de rutinas: sin esto no se puede generar
+--  nada sensato. Cada campo existe porque cambia la rutina resultante.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS perfiles (
+    usuario_id        INTEGER PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
+    fecha_nacimiento  DATE,
+    sexo              VARCHAR(20),
+    altura_cm         NUMERIC(5,1),
+    objetivo          VARCHAR(30) NOT NULL DEFAULT 'salud',
+        -- perder_grasa | ganar_musculo | fuerza | resistencia | salud
+    nivel             VARCHAR(20) NOT NULL DEFAULT 'principiante',
+        -- principiante | intermedio | avanzado
+    dias_por_semana   INTEGER     NOT NULL DEFAULT 3,
+    minutos_sesion    INTEGER     NOT NULL DEFAULT 45,
+    lugar             VARCHAR(20) NOT NULL DEFAULT 'gimnasio',  -- gimnasio | casa | mixto
+    -- Qué equipo tiene realmente a mano. Sin esto el sistema recomienda
+    -- ejercicios que la persona no puede hacer, que es la forma más
+    -- rápida de que abandone.
+    equipo            JSONB       NOT NULL DEFAULT '["peso_corporal"]'::jsonb,
+    -- Días de la semana que puede entrenar: 1=lunes … 7=domingo
+    dias_disponibles  JSONB       NOT NULL DEFAULT '[1,3,5]'::jsonb,
+    actualizado_en    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
+-- ---------------------------------------------------------------------
+--  Condiciones de salud
+--
+--  Determinan qué ejercicios se excluyen y qué avisos se muestran. Son
+--  la razón por la que este sistema no puede limitarse a repartir
+--  ejercicios al azar.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS condiciones (
+    id          SERIAL PRIMARY KEY,
+    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    codigo      VARCHAR(40) NOT NULL,
+        -- diabetes | hipertension | cardiopatia | lesion_lumbar | lesion_hombro
+        -- lesion_rodilla | asma | embarazo | obesidad | artritis | hernia
+    detalle     TEXT,
+    severidad   VARCHAR(20) DEFAULT 'moderada',   -- leve | moderada | alta
+    activa      BOOLEAN NOT NULL DEFAULT TRUE,
+    registrada  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (usuario_id, codigo)
+);
+
+
+-- ---------------------------------------------------------------------
+--  Mediciones corporales
+--
+--  El eje de la aplicación: la persona se mide, entrena, y meses después
+--  se vuelve a medir. La comparación es la que responde si el
+--  entrenamiento sirvió, y ninguna sensación subjetiva la sustituye.
+--
+--  Las medidas van en columnas explícitas y no en una tabla de
+--  atributos: son un conjunto cerrado y estable, y así graficar una
+--  serie es una consulta directa en vez de un pivote.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS mediciones (
+    id             SERIAL PRIMARY KEY,
+    usuario_id     INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    fecha          DATE NOT NULL DEFAULT CURRENT_DATE,
+
+    peso_kg        NUMERIC(5,2),
+    grasa_pct      NUMERIC(4,1),
+    musculo_kg     NUMERIC(5,2),
+    agua_pct       NUMERIC(4,1),
+
+    -- Perímetros en centímetros. Izquierda y derecha por separado:
+    -- las asimetrías son información real, y promediarlas la borra.
+    cuello         NUMERIC(4,1),
+    hombros        NUMERIC(5,1),
+    pecho          NUMERIC(5,1),
+    biceps_izq     NUMERIC(4,1),
+    biceps_der     NUMERIC(4,1),
+    antebrazo_izq  NUMERIC(4,1),
+    antebrazo_der  NUMERIC(4,1),
+    cintura        NUMERIC(5,1),
+    abdomen        NUMERIC(5,1),
+    cadera         NUMERIC(5,1),
+    muslo_izq      NUMERIC(4,1),
+    muslo_der      NUMERIC(4,1),
+    pantorrilla_izq NUMERIC(4,1),
+    pantorrilla_der NUMERIC(4,1),
+
+    notas          TEXT,
+    creado_en      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- Una sola medición por día y persona: medirse dos veces el mismo
+    -- día produce diferencias que son ruido de la cinta métrica, no
+    -- progreso, y ensucian todas las curvas.
+    UNIQUE (usuario_id, fecha)
+);
+
+CREATE INDEX IF NOT EXISTS idx_med_usuario ON mediciones (usuario_id, fecha DESC);
+
+
+-- ---------------------------------------------------------------------
+--  Catálogo de ejercicios
+--
+--  `contraindicado_en` lleva los códigos de condición que descartan el
+--  ejercicio. El motor lo consulta antes de proponer nada.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ejercicios (
+    id                SERIAL PRIMARY KEY,
+    nombre            VARCHAR(120) NOT NULL UNIQUE,
+    grupo             VARCHAR(30)  NOT NULL,
+        -- pecho | espalda | hombros | biceps | triceps | cuadriceps
+        -- femoral | gluteos | pantorrilla | core | cardio | cuerpo_completo
+    patron            VARCHAR(30)  NOT NULL,
+        -- empuje_horizontal | empuje_vertical | traccion_horizontal
+        -- traccion_vertical | dominante_rodilla | dominante_cadera
+        -- core | cardio | aislamiento
+    equipo            VARCHAR(30)  NOT NULL,
+        -- peso_corporal | mancuernas | barra | maquina | banda | kettlebell | polea
+    nivel             VARCHAR(20)  NOT NULL DEFAULT 'principiante',
+    unilateral        BOOLEAN      NOT NULL DEFAULT FALSE,
+    compuesto         BOOLEAN      NOT NULL DEFAULT FALSE,
+    -- Cuánto esfuerzo sistémico exige (1 a 5). Se usa para no encadenar
+    -- varios ejercicios demoledores en la misma sesión.
+    exigencia         INTEGER      NOT NULL DEFAULT 2,
+    video_url         VARCHAR(200),
+    instrucciones     TEXT,
+    contraindicado_en JSONB        NOT NULL DEFAULT '[]'::jsonb,
+    activo            BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+-- Un isométrico se sostiene, no se repite: la plancha va en segundos y
+-- el trabajo cardiovascular continuo en minutos. Sin esta distinción la
+-- rutina termina indicando "12 repeticiones de plancha".
+ALTER TABLE ejercicios
+    ADD COLUMN IF NOT EXISTS medida VARCHAR(15) NOT NULL DEFAULT 'repeticiones';
+        -- repeticiones | segundos | minutos
+
+CREATE INDEX IF NOT EXISTS idx_ej_grupo  ON ejercicios (grupo);
+CREATE INDEX IF NOT EXISTS idx_ej_equipo ON ejercicios (equipo);
+
+
+-- ---------------------------------------------------------------------
+--  Rutinas generadas
+--
+--  `justificacion` guarda por qué el motor eligió lo que eligió. Sin
+--  eso, una recomendación que sorprende al usuario es indistinguible de
+--  un error, y no hay forma de depurarla después.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS rutinas (
+    id                SERIAL PRIMARY KEY,
+    usuario_id        INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    fecha             DATE NOT NULL,
+    nombre            VARCHAR(120) NOT NULL,
+    enfoque           VARCHAR(40)  NOT NULL,
+    minutos_estimados INTEGER,
+    estado            VARCHAR(20)  NOT NULL DEFAULT 'pendiente',
+        -- pendiente | en_curso | completada | omitida
+    justificacion     JSONB        NOT NULL DEFAULT '{}'::jsonb,
+    generada_en       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    iniciada_en       TIMESTAMPTZ,
+    terminada_en      TIMESTAMPTZ,
+
+    -- Una rutina por persona y día: si no, la descarga anticipada del
+    -- día anterior crearía duplicados cada vez que se ejecuta.
+    UNIQUE (usuario_id, fecha)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rut_usuario ON rutinas (usuario_id, fecha DESC);
+
+CREATE TABLE IF NOT EXISTS rutina_ejercicios (
+    id               SERIAL PRIMARY KEY,
+    rutina_id        INTEGER NOT NULL REFERENCES rutinas(id) ON DELETE CASCADE,
+    ejercicio_id     INTEGER NOT NULL REFERENCES ejercicios(id),
+    orden            INTEGER NOT NULL,
+    series           INTEGER NOT NULL,
+    rep_min          INTEGER NOT NULL,
+    rep_max          INTEGER NOT NULL,
+    peso_sugerido_kg NUMERIC(6,2),
+    descanso_seg     INTEGER NOT NULL DEFAULT 90,
+    nota             TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_re_rutina ON rutina_ejercicios (rutina_id, orden);
+
+
+-- ---------------------------------------------------------------------
+--  Series realizadas
+--
+--  `id_local` es el identificador que genera el teléfono cuando está sin
+--  señal. Al sincronizar se usa para no duplicar: la misma serie enviada
+--  dos veces cae en el mismo renglón.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS series (
+    id                  BIGSERIAL PRIMARY KEY,
+    id_local            VARCHAR(60),
+    usuario_id          INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    rutina_ejercicio_id INTEGER REFERENCES rutina_ejercicios(id) ON DELETE CASCADE,
+    ejercicio_id        INTEGER NOT NULL REFERENCES ejercicios(id),
+    serie_num           INTEGER NOT NULL,
+    repeticiones        INTEGER NOT NULL,
+    peso_kg             NUMERIC(6,2) NOT NULL DEFAULT 0,
+    rpe                 NUMERIC(3,1),          -- esfuerzo percibido, 1 a 10
+    realizada_en        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    sincronizada_en     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (usuario_id, id_local)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ser_usuario ON series (usuario_id, realizada_en DESC);
+CREATE INDEX IF NOT EXISTS idx_ser_ej      ON series (usuario_id, ejercicio_id, realizada_en DESC);
+
+
+-- ---------------------------------------------------------------------
+--  Marcas personales
+--
+--  Se recalculan al registrar series. Tenerlas materializadas evita
+--  recorrer el historial entero cada vez que hay que sugerir un peso.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS marcas (
+    usuario_id     INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    ejercicio_id   INTEGER NOT NULL REFERENCES ejercicios(id) ON DELETE CASCADE,
+    mejor_1rm      NUMERIC(6,2),
+    mejor_peso     NUMERIC(6,2),
+    mejor_reps     INTEGER,
+    ultima_fecha   DATE,
+    sesiones       INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (usuario_id, ejercicio_id)
+);
+
+
+-- ---------------------------------------------------------------------
+--  Lecturas biométricas
+--
+--  Vienen del reloj, de un tensiómetro por Bluetooth, de un archivo
+--  exportado o escritas a mano. `origen` lo distingue, porque un dato
+--  medido y uno tecleado no merecen la misma confianza.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS biometria (
+    id          BIGSERIAL PRIMARY KEY,
+    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    tipo        VARCHAR(30) NOT NULL,
+        -- pulso | presion | pasos | calorias | sueno_min | spo2 | vo2max
+    valor       NUMERIC(8,2) NOT NULL,
+    valor2      NUMERIC(8,2),              -- diastólica, cuando tipo = presion
+    origen      VARCHAR(20) NOT NULL DEFAULT 'manual',
+        -- manual | bluetooth | archivo | reloj
+    contexto    VARCHAR(30),               -- reposo | entrenamiento | post
+    medido_en   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (usuario_id, tipo, medido_en)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bio_usuario ON biometria (usuario_id, tipo, medido_en DESC);
+
+
+-- ---------------------------------------------------------------------
+--  Puntos y progresión de nivel
+--
+--  Cada evento se guarda por separado en vez de un contador: así el
+--  total siempre se puede recalcular y auditar, y un error de conteo no
+--  queda grabado para siempre.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS puntos (
+    id          BIGSERIAL PRIMARY KEY,
+    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    tipo        VARCHAR(40) NOT NULL,
+        -- sesion_completada | racha | marca_personal | medicion | constancia
+    puntos      INTEGER NOT NULL,
+    detalle     TEXT,
+    referencia  VARCHAR(60),
+    fecha       DATE NOT NULL DEFAULT CURRENT_DATE,
+    creado_en   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Impide otorgar dos veces el mismo premio por el mismo hecho.
+    UNIQUE (usuario_id, tipo, referencia)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pts_usuario ON puntos (usuario_id, fecha DESC);

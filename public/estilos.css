@@ -1,0 +1,262 @@
+/* =====================================================================
+   Forja · hoja de estilos
+
+   Paleta de grises y azules. Tema oscuro por decisión de uso, no de
+   moda: esta pantalla se mira entre serie y serie, muchas veces en un
+   gimnasio con luz baja y con el teléfono a un palmo de la cara.
+   ===================================================================== */
+
+:root{
+  --az:#3d7fd6;        --az-2:#2c62aa;      --az-3:#1b3c6b;
+  --az-tenue:#16263c;
+  --gr-900:#0e1216;    --gr-850:#131920;    --gr-800:#181f28;
+  --gr-750:#1e2732;    --gr-700:#26313e;    --gr-600:#36434f;
+  --gr-400:#7d8b99;    --gr-300:#9dabb8;    --gr-200:#c3ced8;
+  --gr-100:#e4eaf0;
+
+  --tx:#e8eef4;        --tx2:#9dabb8;       --tx3:#6c7a88;
+  --bg:#0e1216;        --sup:#181f28;       --sup-2:#1e2732;
+  --borde:#2a3541;
+
+  --ok:#3fb27f;        --ok-tenue:#12261e;
+  --alerta:#d8973c;    --alerta-tenue:#2a2113;
+  --mal:#d9534f;       --mal-tenue:#2b1616;
+
+  --radio:12px;
+  --sombra:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.28);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; background:var(--bg)}
+body{
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg); color:var(--tx);
+  font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:76px;          /* barra inferior en el celular */
+  overscroll-behavior-y:contain;
+}
+
+/* ── Encabezado ───────────────────────────────────────────────────── */
+.top{
+  background:var(--gr-850); border-bottom:1px solid var(--borde);
+  position:sticky; top:0; z-index:40;
+}
+.top-in{
+  max-width:1080px; margin:0 auto; padding:0 18px;
+  height:56px; display:flex; align-items:center; gap:14px;
+}
+.marca{display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit}
+.marca-i{
+  width:30px; height:30px; border-radius:9px; flex:none; display:grid; place-items:center;
+  background:linear-gradient(150deg,var(--az),var(--az-3));
+  font-weight:800; font-size:15px; color:#fff; letter-spacing:-.5px;
+}
+.marca b{font-size:16px; letter-spacing:-.3px}
+.top .der{margin-left:auto; display:flex; align-items:center; gap:12px}
+.usuario-chip{
+  display:flex; align-items:center; gap:8px; font-size:13px; color:var(--tx2);
+}
+.nivel-pin{
+  background:var(--az-tenue); color:var(--az); border:1px solid var(--az-3);
+  padding:3px 9px; border-radius:20px; font-size:11.5px; font-weight:700;
+}
+.salir{
+  background:none; border:1px solid var(--borde); color:var(--tx2);
+  padding:6px 11px; border-radius:8px; cursor:pointer; font:inherit; font-size:12.5px;
+}
+.salir:hover{background:var(--mal-tenue); border-color:#5a2a28; color:#f0a09d}
+
+/* ── Estructura ───────────────────────────────────────────────────── */
+.pagina{max-width:1080px; margin:0 auto; padding:22px 18px 40px}
+.titulo{margin-bottom:18px}
+.titulo h1{font-size:24px; font-weight:700; letter-spacing:-.5px; line-height:1.2}
+.titulo p{color:var(--tx2); font-size:14px; margin-top:3px}
+
+.tarjeta{
+  background:var(--sup); border:1px solid var(--borde);
+  border-radius:var(--radio); box-shadow:var(--sombra);
+}
+.t-cab{
+  padding:14px 17px; border-bottom:1px solid var(--borde);
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.t-cab h2{font-size:15px; font-weight:650}
+.t-cab .der{margin-left:auto; display:flex; gap:8px; align-items:center}
+.t-cu{padding:17px}
+
+.rejilla{display:grid; gap:16px}
+.r-2{grid-template-columns:1fr 1fr}
+.r-3{grid-template-columns:repeat(3,1fr)}
+.r-32{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
+@media(max-width:860px){ .r-2,.r-3,.r-32{grid-template-columns:1fr} }
+
+/* ── Controles ────────────────────────────────────────────────────── */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:11px 18px; border-radius:10px; border:1px solid transparent;
+  font:inherit; font-size:14.5px; font-weight:600; cursor:pointer;
+  background:var(--az); color:#fff; text-decoration:none; transition:.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:hover{background:var(--az-2)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5; cursor:not-allowed}
+.btn.sec{background:var(--gr-750); color:var(--tx2); border-color:var(--borde)}
+.btn.sec:hover{background:var(--gr-700); color:var(--tx)}
+.btn.chico{padding:7px 13px; font-size:13px}
+.btn.grande{padding:15px 22px; font-size:16px; width:100%}
+.btn.ok{background:var(--ok)} .btn.ok:hover{filter:brightness(1.08)}
+
+label.campo{display:block; margin-bottom:14px}
+label.campo>span{
+  display:block; font-size:12px; font-weight:600; color:var(--tx2);
+  margin-bottom:6px; letter-spacing:.2px;
+}
+input,select,textarea{
+  width:100%; padding:11px 13px; border:1px solid var(--borde); border-radius:10px;
+  font:inherit; font-size:15px; color:var(--tx); background:var(--gr-900); outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--az); box-shadow:0 0 0 3px rgba(61,127,214,.18);
+}
+input[type=number]{ -moz-appearance:textfield }
+select{appearance:none; background-image:linear-gradient(45deg,transparent 50%,var(--tx3) 50%),linear-gradient(135deg,var(--tx3) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size:5px 5px, 5px 5px; background-repeat:no-repeat; padding-right:36px}
+textarea{resize:vertical; min-height:70px}
+
+/* Selección múltiple en fichas (equipo, condiciones) */
+.fichas{display:flex; flex-wrap:wrap; gap:8px}
+.ficha{
+  display:inline-flex; align-items:center; gap:7px; cursor:pointer;
+  padding:9px 14px; border:1px solid var(--borde); border-radius:22px;
+  background:var(--gr-750); font-size:13.5px; color:var(--tx2); transition:.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.ficha input{position:absolute; opacity:0; width:0; height:0}
+.ficha:hover{border-color:var(--gr-600); color:var(--tx)}
+.ficha.on{background:var(--az-tenue); border-color:var(--az); color:var(--az); font-weight:600}
+
+/* ── Etiquetas ────────────────────────────────────────────────────── */
+.eti{
+  display:inline-block; padding:3px 10px; border-radius:20px;
+  font-size:11.5px; font-weight:650; white-space:nowrap;
+}
+.eti.gris{background:var(--gr-750); color:var(--tx2)}
+.eti.azul{background:var(--az-tenue); color:var(--az)}
+.eti.ok{background:var(--ok-tenue); color:var(--ok)}
+.eti.alerta{background:var(--alerta-tenue); color:var(--alerta)}
+.eti.mal{background:var(--mal-tenue); color:#e58380}
+
+.aviso{
+  padding:12px 15px; border-radius:10px; font-size:14px;
+  border:1px solid; line-height:1.5; margin-bottom:10px;
+}
+.aviso.info{background:var(--az-tenue); border-color:var(--az-3); color:#a9c9ef}
+.aviso.alerta{background:var(--alerta-tenue); border-color:#4a3a1c; color:#e6bd7a}
+.aviso.mal{background:var(--mal-tenue); border-color:#4a2523; color:#eda6a3}
+.aviso.ok{background:var(--ok-tenue); border-color:#1d4536; color:#7fd3ab}
+.aviso b{display:block; margin-bottom:2px}
+
+.vacio{padding:36px 20px; text-align:center; color:var(--tx3); font-size:14px}
+.cargando{padding:34px; text-align:center; color:var(--tx3); font-size:14px}
+.mono{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace; font-size:12.5px}
+
+/* ── Métricas ─────────────────────────────────────────────────────── */
+.metricas{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:11px}
+.metrica{
+  background:var(--sup); border:1px solid var(--borde);
+  border-radius:var(--radio); padding:15px 16px;
+}
+.metrica b{
+  display:block; font-size:25px; font-weight:750; line-height:1.1;
+  font-variant-numeric:tabular-nums; letter-spacing:-.5px;
+}
+.metrica span{display:block; font-size:12px; color:var(--tx2); margin-top:4px}
+.metrica .delta{font-size:12.5px; font-weight:650; margin-top:5px}
+
+/* Un cambio "bueno" o "malo" depende de la medida: bajar grasa es
+   progreso, bajar bíceps no. Quien decide cuál es cuál es el JavaScript;
+   acá sólo se pinta. Las dos clases -.delta en las métricas y .dif en la
+   tabla de comparación- comparten estilo a propósito. */
+.delta.sube, .dif.sube  {color:var(--ok)}
+.delta.baja, .dif.baja  {color:var(--mal)}
+.delta.igual,.dif.igual {color:var(--tx3)}
+
+/* ── Tablas ───────────────────────────────────────────────────────── */
+.tabla-cont{overflow-x:auto; -webkit-overflow-scrolling:touch}
+table{width:100%; border-collapse:collapse; font-size:14px}
+th{
+  text-align:left; padding:10px 14px; font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.6px; color:var(--tx3);
+  border-bottom:1px solid var(--borde); white-space:nowrap;
+}
+td{padding:12px 14px; border-bottom:1px solid var(--borde)}
+tbody tr:last-child td{border-bottom:none}
+tr.clic{cursor:pointer}
+tr.clic:hover td{background:var(--gr-750)}
+
+/* ── Barra inferior (celular) ─────────────────────────────────────── */
+.tabs{
+  position:fixed; left:0; right:0; bottom:0; z-index:50;
+  background:var(--gr-850); border-top:1px solid var(--borde);
+  display:flex; padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+.tabs a{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:7px 2px; text-decoration:none; color:var(--tx3);
+  font-size:10.5px; font-weight:600; border-radius:9px; transition:.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.tabs a svg{width:21px; height:21px; stroke-width:1.9}
+.tabs a.on{color:var(--az)}
+.tabs a:active{background:var(--gr-800)}
+
+/* ── Modal ────────────────────────────────────────────────────────── */
+.telon{
+  position:fixed; inset:0; background:rgba(6,9,12,.72); z-index:100;
+  display:none; align-items:flex-end; justify-content:center;
+  backdrop-filter:blur(3px);
+}
+.telon.abierto{display:flex}
+.modal{
+  background:var(--sup); border:1px solid var(--borde);
+  border-radius:18px 18px 0 0; width:100%; max-width:560px;
+  max-height:92vh; display:flex; flex-direction:column;
+  animation:sube .24s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes sube{from{transform:translateY(28px); opacity:0}to{transform:none; opacity:1}}
+.modal-cab{padding:16px 19px; border-bottom:1px solid var(--borde); display:flex; align-items:center; gap:10px}
+.modal-cab h3{font-size:16px; font-weight:650; flex:1}
+.modal-cab button{
+  background:none; border:none; font-size:24px; color:var(--tx3);
+  cursor:pointer; line-height:1; padding:0 4px;
+}
+.modal-cu{padding:19px; overflow-y:auto; flex:1}
+.modal-pie{padding:15px 19px calc(15px + env(safe-area-inset-bottom)); border-top:1px solid var(--borde); display:flex; gap:9px}
+.modal-pie .btn{flex:1}
+
+@media(min-width:600px){
+  .telon{align-items:center}
+  .modal{border-radius:16px; max-height:86vh}
+}
+
+/* ── Indicador de conexión ────────────────────────────────────────── */
+.sin-red{
+  position:fixed; left:50%; transform:translateX(-50%);
+  bottom:88px; z-index:60;
+  background:var(--alerta-tenue); border:1px solid #4a3a1c; color:#e6bd7a;
+  padding:8px 16px; border-radius:22px; font-size:12.5px; font-weight:600;
+  display:none; align-items:center; gap:8px; box-shadow:var(--sombra);
+}
+.sin-red.visible{display:flex}
+.punto-alerta{width:7px; height:7px; border-radius:50%; background:var(--alerta)}
+
+@media(max-width:600px){
+  .top-in{padding:0 14px}
+  .pagina{padding:16px 14px 30px}
+  .titulo h1{font-size:21px}
+  .usuario-chip span.nombre{display:none}
+}

@@ -1,0 +1,45 @@
+{
+  "name": "Forja · Entrenamiento",
+  "short_name": "Forja",
+  "description": "Tu rutina de cada día, adaptada a tus medidas, tus condiciones de salud y tu objetivo. Funciona sin conexión.",
+  "start_url": "/hoy.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1216",
+  "theme_color": "#131920",
+  "lang": "es",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icono.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icono-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icono-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Rutina de hoy",
+      "short_name": "Hoy",
+      "url": "/hoy.html"
+    },
+    {
+      "name": "Registrar medidas",
+      "short_name": "Medidas",
+      "url": "/medidas.html"
+    }
+  ]
+}

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131920">
+<title>Forja · Medidas</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+.comparador{display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:13px; color:var(--tx2)}
+.comparador select{width:auto; min-width:130px; padding:8px 32px 8px 11px; font-size:13.5px}
+
+.grupo-medidas{margin-bottom:22px}
+.grupo-medidas>h3{
+  font-size:11.5px; text-transform:uppercase; letter-spacing:.7px;
+  color:var(--tx3); font-weight:700; margin-bottom:10px;
+}
+.fila-medida{
+  display:grid; grid-template-columns:1fr 76px 76px 88px; gap:10px; align-items:center;
+  padding:11px 0; border-bottom:1px solid var(--borde); font-size:14px;
+}
+.fila-medida:last-child{border-bottom:none}
+.fila-medida .nom{font-weight:500}
+.fila-medida .val{
+  text-align:right; font-variant-numeric:tabular-nums; color:var(--tx2); font-size:14.5px;
+}
+.fila-medida .val.ahora{color:var(--tx); font-weight:650}
+.fila-medida .dif{
+  text-align:right; font-size:13.5px; font-weight:700; font-variant-numeric:tabular-nums;
+}
+.cab-medida{
+  display:grid; grid-template-columns:1fr 76px 76px 88px; gap:10px;
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.5px;
+  color:var(--tx3); font-weight:700; padding-bottom:8px; border-bottom:1px solid var(--borde);
+  margin-bottom:4px;
+}
+.cab-medida div:not(:first-child){text-align:right}
+
+.entrada-medida{display:grid; grid-template-columns:1fr 96px; gap:11px; align-items:center; margin-bottom:11px}
+.entrada-medida label{font-size:14px; color:var(--tx2)}
+.entrada-medida input{text-align:center; font-variant-numeric:tabular-nums}
+.par{display:grid; grid-template-columns:1fr 1fr; gap:9px}
+
+.grafico{width:100%; height:auto; display:block; margin-top:6px}
+@media(max-width:560px){
+  .fila-medida,.cab-medida{grid-template-columns:1fr 62px 62px 74px; gap:6px; font-size:13.5px}
+}
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="pagina">
+  <div class="titulo">
+    <h1>Medidas corporales</h1>
+    <p>Medite cada cuatro a seis semanas. Antes de eso el cambio real se pierde bajo el error de la cinta.</p>
+  </div>
+
+  <div style="display:flex; gap:9px; margin-bottom:18px">
+    <button class="btn" onclick="abrirNueva()" style="flex:1">Registrar medición</button>
+  </div>
+
+  <div id="contenido"><div class="cargando">Cargando…</div></div>
+</main>
+
+<nav class="tabs" id="tabs"></nav>
+
+<div class="telon" id="m-nueva">
+  <div class="modal">
+    <div class="modal-cab">
+      <h3>Nueva medición</h3>
+      <button onclick="cerrarModal('m-nueva')">&times;</button>
+    </div>
+    <div class="modal-cu">
+      <div class="aviso info" style="margin-bottom:16px">
+        Medite siempre en las mismas condiciones: a la misma hora, sin haber entrenado antes
+        y sin bombeo muscular. Si no, estarías comparando situaciones distintas.
+      </div>
+
+      <label class="campo"><span>Fecha</span><input type="date" id="f-fecha"></label>
+
+      <div class="grupo-medidas">
+        <h3>Composición</h3>
+        <div class="entrada-medida"><label>Peso</label><input type="number" step="0.1" id="f-peso_kg" placeholder="kg"></div>
+        <div class="entrada-medida"><label>Grasa corporal</label><input type="number" step="0.1" id="f-grasa_pct" placeholder="%"></div>
+        <div class="entrada-medida"><label>Masa muscular</label><input type="number" step="0.1" id="f-musculo_kg" placeholder="kg"></div>
+      </div>
+
+      <div class="grupo-medidas">
+        <h3>Tronco</h3>
+        <div class="entrada-medida"><label>Cuello</label><input type="number" step="0.1" id="f-cuello" placeholder="cm"></div>
+        <div class="entrada-medida"><label>Hombros</label><input type="number" step="0.1" id="f-hombros" placeholder="cm"></div>
+        <div class="entrada-medida"><label>Pecho</label><input type="number" step="0.1" id="f-pecho" placeholder="cm"></div>
+        <div class="entrada-medida"><label>Cintura</label><input type="number" step="0.1" id="f-cintura" placeholder="cm"></div>
+        <div class="entrada-medida"><label>Abdomen</label><input type="number" step="0.1" id="f-abdomen" placeholder="cm"></div>
+        <div class="entrada-medida"><label>Cadera</label><input type="number" step="0.1" id="f-cadera" placeholder="cm"></div>
+      </div>
+
+      <div class="grupo-medidas">
+        <h3>Brazos · izquierdo y derecho</h3>
+        <p style="font-size:12.5px; color:var(--tx3); margin-bottom:11px; line-height:1.5">
+          Se miden por separado a propósito: las asimetrías son información real, y promediarlas la borra.
+        </p>
+        <div class="entrada-medida" style="grid-template-columns:1fr 1fr 1fr; gap:9px">
+          <label style="align-self:center">Bíceps</label>
+          <input type="number" step="0.1" id="f-biceps_izq" placeholder="izq">
+          <input type="number" step="0.1" id="f-biceps_der" placeholder="der">
+        </div>
+        <div class="entrada-medida" style="grid-template-columns:1fr 1fr 1fr; gap:9px">
+          <label style="align-self:center">Antebrazo</label>
+          <input type="number" step="0.1" id="f-antebrazo_izq" placeholder="izq">
+          <input type="number" step="0.1" id="f-antebrazo_der" placeholder="der">
+        </div>
+      </div>
+
+      <div class="grupo-medidas">
+        <h3>Piernas · izquierda y derecha</h3>
+        <div class="entrada-medida" style="grid-template-columns:1fr 1fr 1fr; gap:9px">
+          <label style="align-self:center">Muslo</label>
+          <input type="number" step="0.1" id="f-muslo_izq" placeholder="izq">
+          <input type="number" step="0.1" id="f-muslo_der" placeholder="der">
+        </div>
+        <div class="entrada-medida" style="grid-template-columns:1fr 1fr 1fr; gap:9px">
+          <label style="align-self:center">Pantorrilla</label>
+          <input type="number" step="0.1" id="f-pantorrilla_izq" placeholder="izq">
+          <input type="number" step="0.1" id="f-pantorrilla_der" placeholder="der">
+        </div>
+      </div>
+
+      <label class="campo"><span>Notas</span><textarea id="f-notas" placeholder="Cómo te sentiste, cambios en la alimentación…"></textarea></label>
+      <div id="f-msg"></div>
+    </div>
+    <div class="modal-pie">
+      <button class="btn sec" onclick="cerrarModal('m-nueva')">Cancelar</button>
+      <button class="btn" onclick="guardar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const usuario = Sesion.exigir();
+let mediciones = [];
+
+const ETIQUETAS = {
+  peso_kg:"Peso", grasa_pct:"Grasa corporal", musculo_kg:"Masa muscular", agua_pct:"Agua",
+  cuello:"Cuello", hombros:"Hombros", pecho:"Pecho", cintura:"Cintura",
+  abdomen:"Abdomen", cadera:"Cadera",
+  biceps_izq:"Bíceps izquierdo", biceps_der:"Bíceps derecho",
+  antebrazo_izq:"Antebrazo izquierdo", antebrazo_der:"Antebrazo derecho",
+  muslo_izq:"Muslo izquierdo", muslo_der:"Muslo derecho",
+  pantorrilla_izq:"Pantorrilla izquierda", pantorrilla_der:"Pantorrilla derecha"
+};
+
+const UNIDAD = { peso_kg:"kg", musculo_kg:"kg", grasa_pct:"%", agua_pct:"%" };
+const u = c => UNIDAD[c] || "cm";
+
+// Para cada medida, si crecer es bueno depende de qué se está midiendo:
+// más bíceps es progreso, más cintura casi nunca lo es. Sin esto, el
+// color de la diferencia diría lo contrario de lo que ocurrió.
+const CRECER_ES_BUENO = {
+  peso_kg:null, grasa_pct:false, musculo_kg:true, agua_pct:null,
+  cuello:null, hombros:true, pecho:true, cintura:false, abdomen:false, cadera:null,
+  biceps_izq:true, biceps_der:true, antebrazo_izq:true, antebrazo_der:true,
+  muslo_izq:true, muslo_der:true, pantorrilla_izq:true, pantorrilla_der:true
+};
+
+const GRUPOS = [
+  { titulo:"Composición", campos:["peso_kg","grasa_pct","musculo_kg"] },
+  { titulo:"Tronco",      campos:["cuello","hombros","pecho","cintura","abdomen","cadera"] },
+  { titulo:"Brazos",      campos:["biceps_izq","biceps_der","antebrazo_izq","antebrazo_der"] },
+  { titulo:"Piernas",     campos:["muslo_izq","muslo_der","pantorrilla_izq","pantorrilla_der"] }
+];
+
+async function cargar() {
+  pintarEstructura("medidas");
+  try {
+    mediciones = await api(`/atleta/${usuario.id}/mediciones`);
+    pintar();
+  } catch (err) {
+    document.getElementById("contenido").innerHTML =
+      `<div class="aviso ${err.sinRed ? "alerta" : "mal"}">${esc(err.message)}</div>`;
+  }
+}
+
+function pintar() {
+  const c = document.getElementById("contenido");
+
+  if (mediciones.length === 0) {
+    c.innerHTML = `<div class="tarjeta"><div class="vacio">
+      Todavía no registraste ninguna medición.<br>
+      <span style="font-size:13px">Esta primera es tu punto de partida: sin ella no hay con qué comparar después.</span>
+    </div></div>`;
+    return;
+  }
+
+  const primera = mediciones[0];
+  const ultima  = mediciones[mediciones.length - 1];
+
+  c.innerHTML = `
+    ${mediciones.length === 1 ? `
+      <div class="aviso info" style="margin-bottom:16px">
+        <b>Una sola medición</b>
+        Es tu punto de partida. Volvé a medirte en cuatro a seis semanas para ver la diferencia.
+      </div>` : ""}
+
+    ${mediciones.length > 1 ? `
+      <div class="tarjeta" style="margin-bottom:16px">
+        <div class="t-cab">
+          <h2>Comparar</h2>
+          <div class="der comparador">
+            <select id="sel-desde" onchange="pintar()">
+              ${mediciones.map((m,i) => `<option value="${i}" ${i===0?"selected":""}>${fecha(m.fecha)}</option>`).join("")}
+            </select>
+            <span>con</span>
+            <select id="sel-hasta" onchange="pintar()">
+              ${mediciones.map((m,i) => `<option value="${i}" ${i===mediciones.length-1?"selected":""}>${fecha(m.fecha)}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <div class="t-cu" id="tabla-comparar"></div>
+      </div>` : ""}
+
+    ${pintarEvolucionPeso()}
+
+    <div class="tarjeta">
+      <div class="t-cab"><h2>Historial</h2>
+        <div class="der"><span class="eti gris">${mediciones.length} medicion${mediciones.length===1?"":"es"}</span></div>
+      </div>
+      <div class="tabla-cont"><table>
+        <thead><tr><th>Fecha</th><th>Peso</th><th>Grasa</th><th>Cintura</th><th>Bíceps d.</th><th>Muslo d.</th></tr></thead>
+        <tbody>${mediciones.slice().reverse().map(m => `
+          <tr>
+            <td>${fecha(m.fecha)}<div style="font-size:11.5px;color:var(--tx3)">${relativo(m.fecha)}</div></td>
+            <td>${m.peso_kg ?? "—"}</td><td>${m.grasa_pct ? m.grasa_pct+"%" : "—"}</td>
+            <td>${m.cintura ?? "—"}</td><td>${m.biceps_der ?? "—"}</td><td>${m.muslo_der ?? "—"}</td>
+          </tr>`).join("")}
+        </tbody></table></div>
+    </div>`;
+
+  if (mediciones.length > 1) pintarComparacion();
+}
+
+function pintarComparacion() {
+  const iA = Number(document.getElementById("sel-desde").value);
+  const iB = Number(document.getElementById("sel-hasta").value);
+  const a = mediciones[iA], b = mediciones[iB];
+  const dias = Math.round((aFecha(b.fecha) - aFecha(a.fecha)) / 86400000);
+
+  let html = `<p style="font-size:13px; color:var(--tx2); margin-bottom:16px">
+    ${Math.abs(dias)} días entre una medición y la otra.
+  </p>`;
+
+  for (const g of GRUPOS) {
+    const filas = g.campos.map(campo => {
+      const va = a[campo] === null || a[campo] === undefined ? null : Number(a[campo]);
+      const vb = b[campo] === null || b[campo] === undefined ? null : Number(b[campo]);
+      if (va === null || vb === null) return "";
+
+      const dif = Math.round((vb - va) * 10) / 10;
+      const bueno = CRECER_ES_BUENO[campo];
+      // Sin criterio definido (peso, cadera) la diferencia se muestra
+      // en gris: subir o bajar no es bueno ni malo por sí mismo.
+      const clase = dif === 0 ? "igual"
+                  : bueno === null ? "igual"
+                  : (dif > 0) === bueno ? "sube" : "baja";
+
+      return `<div class="fila-medida">
+        <div class="nom">${ETIQUETAS[campo]}</div>
+        <div class="val">${va}</div>
+        <div class="val ahora">${vb}</div>
+        <div class="dif ${clase}">${dif > 0 ? "+" : ""}${dif} ${u(campo)}</div>
+      </div>`;
+    }).filter(Boolean).join("");
+
+    if (!filas) continue;
+    html += `<div class="grupo-medidas">
+      <h3>${g.titulo}</h3>
+      <div class="cab-medida"><div></div><div>${fecha(a.fecha,false)}</div><div>${fecha(b.fecha,false)}</div><div>Cambio</div></div>
+      ${filas}
+    </div>`;
+  }
+
+  document.getElementById("tabla-comparar").innerHTML = html;
+}
+
+/** Curva de peso, en SVG sin librerías. */
+function pintarEvolucionPeso() {
+  const puntos = mediciones.filter(m => m.peso_kg !== null).map(m => ({
+    x: aFecha(m.fecha).getTime(), y: Number(m.peso_kg), fecha: m.fecha
+  }));
+  if (puntos.length < 2) return "";
+
+  const An=460, Al=150, mI=34, mD=12, mS=14, mB=22;
+  const ancho=An-mI-mD, alto=Al-mS-mB;
+  const xs=puntos.map(p=>p.x), ys=puntos.map(p=>p.y);
+  const x0=Math.min(...xs), x1=Math.max(...xs);
+  let y0=Math.min(...ys), y1=Math.max(...ys);
+  const margen=Math.max((y1-y0)*0.18, 0.6);
+  y0-=margen; y1+=margen;
+
+  const px=v=> mI + (x1===x0 ? ancho/2 : ((v-x0)/(x1-x0))*ancho);
+  const py=v=> mS + alto - ((v-y0)/(y1-y0))*alto;
+
+  const linea = puntos.map(p=>`${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`).join(" ");
+  const area = `${mI},${mS+alto} ${linea} ${px(x1).toFixed(1)},${mS+alto}`;
+
+  return `
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="t-cab"><h2>Peso en el tiempo</h2></div>
+      <div class="t-cu">
+        <svg class="grafico" viewBox="0 0 ${An} ${Al}" preserveAspectRatio="xMidYMid meet"
+             role="img" aria-label="Evolución del peso corporal">
+          <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3d7fd6" stop-opacity=".28"/>
+            <stop offset="100%" stop-color="#3d7fd6" stop-opacity="0"/>
+          </linearGradient></defs>
+          ${[y0, (y0+y1)/2, y1].map(v=>`
+            <line x1="${mI}" y1="${py(v).toFixed(1)}" x2="${An-mD}" y2="${py(v).toFixed(1)}" stroke="#2a3541"/>
+            <text x="${mI-6}" y="${(py(v)+3.5).toFixed(1)}" text-anchor="end" font-size="9.5" fill="#6c7a88">${v.toFixed(1)}</text>
+          `).join("")}
+          <polygon points="${area}" fill="url(#g)"/>
+          <polyline points="${linea}" fill="none" stroke="#3d7fd6" stroke-width="2.2"
+                    stroke-linejoin="round" stroke-linecap="round"/>
+          ${puntos.map(p=>`
+            <circle cx="${px(p.x).toFixed(1)}" cy="${py(p.y).toFixed(1)}" r="3.6"
+                    fill="#0e1216" stroke="#3d7fd6" stroke-width="2"/>`).join("")}
+          <text x="${mI}" y="${Al-6}" font-size="9.5" fill="#6c7a88">${fecha(puntos[0].fecha,false)}</text>
+          <text x="${An-mD}" y="${Al-6}" text-anchor="end" font-size="9.5" fill="#6c7a88">${fecha(puntos[puntos.length-1].fecha,false)}</text>
+        </svg>
+      </div>
+    </div>`;
+}
+
+const CAMPOS = ["peso_kg","grasa_pct","musculo_kg","cuello","hombros","pecho",
+  "biceps_izq","biceps_der","antebrazo_izq","antebrazo_der","cintura","abdomen",
+  "cadera","muslo_izq","muslo_der","pantorrilla_izq","pantorrilla_der"];
+
+function abrirNueva() {
+  document.getElementById("f-fecha").value = hoyISO();
+  CAMPOS.forEach(c => { const el = document.getElementById("f-"+c); if (el) el.value = ""; });
+  document.getElementById("f-notas").value = "";
+  document.getElementById("f-msg").innerHTML = "";
+
+  // Se precargan los valores de la última medición: casi todos los
+  // perímetros cambian poco entre tomas, y volver a teclear diecisiete
+  // números es la razón más común para dejar de medirse.
+  if (mediciones.length) {
+    const ult = mediciones[mediciones.length - 1];
+    CAMPOS.forEach(c => {
+      const el = document.getElementById("f-"+c);
+      if (el && ult[c] !== null && ult[c] !== undefined) el.placeholder = `anterior: ${ult[c]}`;
+    });
+  }
+  abrirModal("m-nueva");
+}
+
+async function guardar() {
+  const cuerpo = { fecha: document.getElementById("f-fecha").value || hoyISO(),
+                   notas: document.getElementById("f-notas").value.trim() || null };
+  let alguno = false;
+  for (const c of CAMPOS) {
+    const el = document.getElementById("f-"+c);
+    if (el && el.value !== "") { cuerpo[c] = Number(el.value); alguno = true; }
+  }
+  if (!alguno) {
+    document.getElementById("f-msg").innerHTML =
+      `<div class="aviso mal">Anotá al menos una medida.</div>`;
+    return;
+  }
+
+  try {
+    await api(`/atleta/${usuario.id}/mediciones`, { method:"POST", body: cuerpo });
+    cerrarModal("m-nueva");
+    await cargar();
+    mostrarNivel();
+  } catch (err) {
+    document.getElementById("f-msg").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+cargar();
+</script>
+</body>
+</html>
