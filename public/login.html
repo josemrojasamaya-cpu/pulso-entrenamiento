@@ -118,6 +118,17 @@ body::after{background:linear-gradient(180deg,
   .portada h1{font-size:25px}
   .marca-grande b{font-size:26px}
 }
+
+.roles{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.roles .rol{
+  padding:13px 10px; border:1px solid var(--borde); border-radius:11px;
+  background:var(--gr-850); color:var(--tx2); font:inherit; cursor:pointer;
+  text-align:left; transition:.15s;
+}
+.roles .rol:hover{border-color:var(--az)}
+.roles .rol.on{border-color:var(--az); background:var(--az-tenue); color:var(--tx)}
+.roles .rol b{display:block; font-size:13.5px; font-weight:700}
+.roles .rol small{display:block; font-size:11px; color:var(--tx3); margin-top:2px}
 </style>
 </head>
 <body>
@@ -195,6 +206,22 @@ body::after{background:linear-gradient(180deg,
         <label class="campo"><span>Nombre completo</span>
           <input type="text" id="c-nombre" autocomplete="name" required>
         </label>
+
+        <!-- El rol se elige acá. Antes no existía esta pregunta y el
+             registro creaba siempre un atleta, así que no había forma de
+             tener una cuenta de entrenador: la pantalla del profesor
+             existía y era inalcanzable. -->
+        <div class="campo">
+          <span>¿Qué vas a hacer en Pulso?</span>
+          <div class="roles">
+            <button type="button" class="rol on" data-rol="atleta" onclick="elegirRol(this)">
+              <b>Entrenar</b><small>Rutinas para mí</small>
+            </button>
+            <button type="button" class="rol" data-rol="entrenador" onclick="elegirRol(this)">
+              <b>Entrenar a otros</b><small>Soy profesor o coach</small>
+            </button>
+          </div>
+        </div>
         <label class="campo"><span>Correo</span>
           <input type="email" id="c-email" autocomplete="email" autocapitalize="none" required>
         </label>
@@ -280,6 +307,16 @@ body::after{background:linear-gradient(180deg,
 <script src="almacen.js"></script>
 <script src="comun.js"></script>
 <script>
+let rolElegido = "atleta";
+function elegirRol(b) {
+  document.querySelectorAll(".roles .rol").forEach(x => x.classList.remove("on"));
+  b.classList.add("on");
+  rolElegido = b.dataset.rol;
+  // Un entrenador no necesita dar sus medidas para crear la cuenta: no
+  // viene a que le armen una rutina, viene a seguir a sus alumnos.
+  const cuerpo = document.getElementById("campos-atleta");
+  if (cuerpo) cuerpo.style.display = rolElegido === "entrenador" ? "none" : "";
+}
 const msg = document.getElementById("msg");
 const aviso = (t, tipo) => { msg.innerHTML = `<div class="aviso ${tipo}">${esc(t)}</div>`; };
 
@@ -345,6 +382,7 @@ formaCrear.addEventListener("submit", async e => {
     email:    document.getElementById("c-email").value.trim(),
     username: document.getElementById("c-usuario").value.trim(),
     telefono: document.getElementById("c-telefono").value.trim() || null,
+    rol: rolElegido,
     password: document.getElementById("c-clave").value,
     fecha_nacimiento: document.getElementById("c-nacimiento").value || null,
     sexo:     document.getElementById("c-sexo").value || null,

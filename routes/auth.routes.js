@@ -94,11 +94,19 @@ router.post("/registro", async (req, res) => {
             if (existe.rowCount === 0) codigo = c;
         }
 
+        // El rol se elige al registrarse, y sólo entre los dos que la
+        // pantalla ofrece. Se valida contra una lista blanca y NUNCA se
+        // pasa lo que llegue del cliente: sin esta comprobación bastaría
+        // con mandar rol:"admin" desde la consola del navegador para
+        // crearse una cuenta con permisos de administrador.
+        const ROLES_PERMITIDOS = ["atleta", "entrenador"];
+        const rol = ROLES_PERMITIDOS.includes(b.rol) ? b.rol : "atleta";
+
         const r = await cliente.query(
             `INSERT INTO usuarios (username, password_hash, rol, nombre, email, telefono, codigo_invitacion)
-             VALUES ($1,$2,'atleta',$3,$4,$5,$6)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)
              RETURNING id, username, rol, nombre, email, plan, codigo_invitacion`,
-            [username, await bcrypt.hash(password, 10), nombre, email,
+            [username, await bcrypt.hash(password, 10), rol, nombre, email,
              b.telefono ? String(b.telefono).trim().slice(0, 40) : null, codigo]
         );
         const u = r.rows[0];
