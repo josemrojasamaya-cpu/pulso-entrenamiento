@@ -198,7 +198,7 @@ function pintarEstructura(activo) {
     top.innerHTML = `
       <div class="top-in">
         <a class="marca" href="hoy.html">
-          <div class="marca-i">F</div><b>Pulso</b>
+          <img class="marca-i" src="/icono.svg" alt=""><b>Pulso</b>
         </a>
         <div class="der">
           <div class="usuario-chip">

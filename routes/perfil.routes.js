@@ -89,6 +89,12 @@ router.put("/:id/perfil", exigirAccesoAtleta, async (req, res) => {
     let equipo = Array.isArray(b.equipo) ? b.equipo.filter(e => EQUIPO_VALIDO.includes(e)) : null;
     if (equipo && equipo.length === 0) equipo = ["peso_corporal"];
 
+    let equipoCasa = Array.isArray(b.equipo_casa)
+        ? b.equipo_casa.filter(e => EQUIPO_VALIDO.includes(e)) : null;
+    // Siempre queda al menos el peso corporal: es lo que hay en cualquier
+    // casa, y sin nada marcado no se podría armar ninguna sesión.
+    if (equipoCasa && equipoCasa.length === 0) equipoCasa = ["peso_corporal"];
+
     const dias = Number(b.dias_por_semana);
     if (b.dias_por_semana !== undefined && (!Number.isInteger(dias) || dias < 1 || dias > 7)) {
         return res.status(400).json({ message: "Los días por semana van de 1 a 7." });
@@ -103,12 +109,14 @@ router.put("/:id/perfil", exigirAccesoAtleta, async (req, res) => {
         await pool.query(
             `INSERT INTO perfiles
                (usuario_id, fecha_nacimiento, sexo, altura_cm, objetivo, nivel,
-                dias_por_semana, minutos_sesion, lugar, equipo, dias_disponibles, actualizado_en)
+                dias_por_semana, minutos_sesion, lugar, equipo, dias_disponibles,
+                equipo_casa, actualizado_en)
              VALUES ($1,$2,$3,$4,
                      COALESCE($5,'salud'), COALESCE($6,'principiante'),
                      COALESCE($7,3), COALESCE($8,45), COALESCE($9,'gimnasio'),
                      COALESCE($10::jsonb,'["peso_corporal"]'::jsonb),
-                     COALESCE($11::jsonb,'[1,3,5]'::jsonb), NOW())
+                     COALESCE($11::jsonb,'[1,3,5]'::jsonb),
+                     COALESCE($12::jsonb,'["peso_corporal"]'::jsonb), NOW())
              ON CONFLICT (usuario_id) DO UPDATE SET
                 fecha_nacimiento = COALESCE(EXCLUDED.fecha_nacimiento, perfiles.fecha_nacimiento),
                 sexo             = COALESCE(EXCLUDED.sexo,             perfiles.sexo),
@@ -120,6 +128,7 @@ router.put("/:id/perfil", exigirAccesoAtleta, async (req, res) => {
                 lugar            = EXCLUDED.lugar,
                 equipo           = EXCLUDED.equipo,
                 dias_disponibles = EXCLUDED.dias_disponibles,
+                equipo_casa      = COALESCE(EXCLUDED.equipo_casa, perfiles.equipo_casa),
                 actualizado_en   = NOW()`,
             [
                 req.atletaId, b.fecha_nacimiento || null, b.sexo || null, b.altura_cm || null,
@@ -128,7 +137,8 @@ router.put("/:id/perfil", exigirAccesoAtleta, async (req, res) => {
                 Number.isInteger(minutos) ? minutos : null,
                 b.lugar || null,
                 equipo ? JSON.stringify(equipo) : null,
-                Array.isArray(b.dias_disponibles) ? JSON.stringify(b.dias_disponibles) : null
+                Array.isArray(b.dias_disponibles) ? JSON.stringify(b.dias_disponibles) : null,
+                equipoCasa ? JSON.stringify(equipoCasa) : null
             ]
         );
         const rehechas = await descartarPlanFuturo(req.atletaId);

@@ -92,6 +92,17 @@ CREATE TABLE IF NOT EXISTS perfiles (
     actualizado_en    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Qué hay disponible en casa, que casi nunca es lo mismo que en el
+-- gimnasio. Sin este dato, "hoy entreno en casa" tendría que adivinar.
+ALTER TABLE perfiles
+    ADD COLUMN IF NOT EXISTS equipo_casa JSONB NOT NULL DEFAULT '["peso_corporal"]'::jsonb;
+
+-- Dónde se entrena HOY, que puede no ser lo habitual. Se guarda por
+-- rutina y no en el perfil: cambiar de lugar un día no debería
+-- reescribir la preferencia de siempre.
+ALTER TABLE rutinas
+    ADD COLUMN IF NOT EXISTS lugar VARCHAR(20) NOT NULL DEFAULT 'gimnasio';
+
 
 -- ---------------------------------------------------------------------
 --  Condiciones de salud

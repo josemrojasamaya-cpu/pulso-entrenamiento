@@ -294,6 +294,90 @@ const { restricciones, esApto, CONDICIONES } = require("../lib/salud");
               antes === despues, `${antes} → ${despues}`);
     }
 
+    seccion("ENTRENAR EN CASA");
+
+    {
+        await ponerPerfil({
+            nivel: "intermedio", objetivo: "ganar_musculo",
+            equipo: ["peso_corporal", "mancuernas", "barra", "maquina", "polea"],
+            equipo_casa: ["peso_corporal"]
+        });
+
+        const gim = await pedir(`/api/entrenamiento/dia/${dia(0)}?lugar=gimnasio`, token);
+        check("la sesión de gimnasio usa el equipo del gimnasio",
+              gim.status === 200 &&
+              gim.d.rutina.ejercicios.some(e => e.equipo !== "peso_corporal"),
+              gim.d.rutina ? gim.d.rutina.ejercicios.map(e => e.equipo).join(",") : "");
+
+        const casa = await pedir(`/api/entrenamiento/dia/${dia(0)}?lugar=casa`, token);
+        check("cambiar a casa rehace la sesión",
+              casa.status === 200 && casa.d.rutina.lugar === "casa",
+              `lugar: ${casa.d.rutina && casa.d.rutina.lugar}`);
+
+        const conEquipo = (casa.d.rutina.ejercicios || []).filter(e => e.equipo !== "peso_corporal");
+        check("en casa no se propone equipo que no está ahí",
+              conEquipo.length === 0,
+              conEquipo.map(e => `${e.nombre} (${e.equipo})`).join(", "));
+
+        check("la sesión de casa igual queda completa",
+              casa.d.rutina.ejercicios.length >= 4, `${casa.d.rutina.ejercicios.length} ejercicios`);
+
+        // Con la sesión empezada no se puede cambiar de lugar: hay
+        // trabajo registrado que se perdería.
+        const primero = casa.d.rutina.ejercicios[0];
+        await pedir("/api/entrenamiento/series", token, {
+            method: "POST",
+            body: { id_local: `casa-${Date.now()}`, ejercicio_id: primero.ejercicio_id,
+                    rutina_ejercicio_id: primero.id, serie_num: 1, repeticiones: 10, peso_kg: 0 }
+        });
+        const traba = await pedir(`/api/entrenamiento/dia/${dia(0)}?lugar=gimnasio`, token);
+        check("con la sesión empezada no se puede cambiar de lugar",
+              traba.status === 409 && traba.d.ya_empezada === true, `dio ${traba.status}`);
+    }
+
+    seccion("REGISTRO");
+
+    {
+        const marca = Date.now();
+        const base = {
+            nombre: "Persona De Prueba", email: `p${marca}@ejemplo.com`,
+            username: `p${marca}`, password: "unaClaveLarga1", acepta_terminos: true
+        };
+        const crear = (extra) => fetch(B + "/api/registro", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...base, ...extra })
+        }).then(async r => ({ status: r.status, d: await r.json().catch(() => ({})) }));
+
+        const ok = await crear({ altura_cm: 170, peso_kg: 68 });
+        check("se crea la cuenta", ok.status === 201 && Boolean(ok.d.token), ok.d.message || "");
+        check("viene con código de invitación", Boolean(ok.d.usuario && ok.d.usuario.codigo_invitacion));
+        check("empieza en el plan gratuito", ok.d.usuario && ok.d.usuario.plan === "gratis");
+
+        const repetido = await crear({ username: `otro${marca}` });
+        check("no deja repetir el correo", repetido.status === 409, `dio ${repetido.status}`);
+
+        const sinTerminos = await crear({
+            email: `x${marca}@e.com`, username: `x${marca}`, acepta_terminos: false });
+        check("sin aceptar los términos no se crea", sinTerminos.status === 400);
+
+        const claveCorta = await crear({
+            email: `y${marca}@e.com`, username: `y${marca}`, password: "corta" });
+        check("rechaza una contraseña de menos de ocho", claveCorta.status === 400);
+
+        // El peso del registro tiene que quedar como primera medición: es
+        // el punto de partida contra el que se compara todo lo demás.
+        const nuevo = await pedir(`/api/atleta/${ok.d.usuario.id}/mediciones`, ok.d.token);
+        check("el peso del registro queda como primera medición",
+              nuevo.status === 200 && nuevo.d.length === 1 && Number(nuevo.d[0].peso_kg) === 68,
+              JSON.stringify(nuevo.d).slice(0, 90));
+
+        const porCorreo = await fetch(B + "/api/login", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: base.email, password: base.password })
+        }).then(r => r.json());
+        check("se puede entrar con el correo", Boolean(porCorreo.token));
+    }
+
     seccion("PERMISOS");
 
     const otro = await login("hipertenso");

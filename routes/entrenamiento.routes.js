@@ -103,12 +103,13 @@ async function persistir(usuarioId, fecha, plan) {
         await cliente.query("BEGIN");
 
         const r = await cliente.query(
-            `INSERT INTO rutinas (usuario_id, fecha, nombre, enfoque, minutos_estimados, justificacion)
-             VALUES ($1,$2::date,$3,$4,$5,$6::jsonb)
+            `INSERT INTO rutinas (usuario_id, fecha, nombre, enfoque, minutos_estimados, justificacion, lugar)
+             VALUES ($1,$2::date,$3,$4,$5,$6::jsonb,$7)
              ON CONFLICT (usuario_id, fecha) DO NOTHING
              RETURNING id`,
             [usuarioId, fecha, plan.nombre, plan.enfoque, plan.minutos_estimados,
-             JSON.stringify(plan.justificacion)]
+             JSON.stringify(plan.justificacion),
+             (plan.justificacion && plan.justificacion.lugar) || "gimnasio"]
         );
 
         // Si ya existía, se respeta la que estaba: regenerarla borraría
@@ -190,8 +191,9 @@ async function revalidar(usuarioId, rutina) {
  * cada una lo hiciera por su cuenta, la rutina descargada por
  * adelantado podría no coincidir con la que se sirve al abrirla.
  */
-function planDelDia(ctx, fecha, usuarioId, sesionIndice) {
+function planDelDia(ctx, fecha, usuarioId, sesionIndice, lugar = null) {
     const plan = generar({
+        lugar,
         perfil: ctx.perfil,
         condiciones: ctx.condiciones,
         severidades: ctx.severidades,
@@ -302,6 +304,9 @@ router.get("/dia/:fecha", async (req, res) => {
     const fecha = req.params.fecha;
     const usuarioId = Number(req.query.atleta_id) || req.usuario.id;
 
+    const LUGARES = ["gimnasio", "casa", "mixto"];
+    const lugarPedido = LUGARES.includes(req.query.lugar) ? req.query.lugar : null;
+
     if (!(await puedeVerAtleta(req.usuario, usuarioId))) {
         return res.status(404).json({ message: "No encontrado." });
     }
@@ -324,6 +329,20 @@ router.get("/dia/:fecha", async (req, res) => {
     try {
         let rutina = await leerRutina(usuarioId, fecha);
         let regenerada = false;
+
+        // Pedir otro lugar rehace la sesión, siempre que no se haya
+        // empezado: ahí ya hay trabajo registrado que no se puede perder.
+        if (rutina && lugarPedido && rutina.lugar !== lugarPedido) {
+            const empezada = rutina.ejercicios.some(e => (e.realizadas || []).length > 0);
+            if (empezada) {
+                return res.status(409).json({
+                    message: "Esta sesión ya está empezada. Terminala o salteala, y mañana elegís dónde entrenar.",
+                    ya_empezada: true
+                });
+            }
+            await descartarRutina(rutina.id);
+            rutina = null;
+        }
 
         if (rutina) {
             const control = await revalidar(usuarioId, rutina);
@@ -398,7 +417,7 @@ router.get("/dia/:fecha", async (req, res) => {
             });
         }
 
-        const plan = planDelDia(ctx, fecha, usuarioId, ctx.sesionIndice);
+        const plan = planDelDia(ctx, fecha, usuarioId, ctx.sesionIndice, lugarPedido);
         if (plan.error) return res.status(409).json(plan);
 
         await persistir(usuarioId, fecha, plan);

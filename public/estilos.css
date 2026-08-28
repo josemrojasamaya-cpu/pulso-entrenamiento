@@ -53,9 +53,7 @@ body{
 }
 .marca{display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit}
 .marca-i{
-  width:30px; height:30px; border-radius:9px; flex:none; display:grid; place-items:center;
-  background:linear-gradient(150deg,var(--az),var(--az-3));
-  font-weight:800; font-size:15px; color:#fff; letter-spacing:-.5px;
+  width:30px; height:30px; border-radius:9px; flex:none; display:block;
 }
 .marca b{font-size:16px; letter-spacing:-.3px}
 .top .der{margin-left:auto; display:flex; align-items:center; gap:12px}

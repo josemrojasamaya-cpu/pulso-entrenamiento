@@ -100,6 +100,40 @@
 .bloque .tx b{display:block; font-size:13.5px; font-weight:650}
 .bloque .tx span{font-size:12px; color:var(--tx2); line-height:1.45; display:block; margin-top:2px}
 
+/* Selector de lugar: el mismo día se puede entrenar en otro lado. */
+.lugares{display:flex; gap:6px; margin-top:14px}
+.lugares button{
+  flex:1; padding:9px 10px; border:1px solid var(--borde); border-radius:9px;
+  background:var(--gr-800); color:var(--tx2); font:inherit; font-size:12.5px;
+  font-weight:600; cursor:pointer; transition:.15s;
+}
+.lugares button:hover{border-color:var(--az); color:var(--tx)}
+.lugares button.on{background:var(--az); border-color:var(--az); color:#fff}
+
+/* Explicación de los números. Va plegada, y sólo se abre sola la
+   primera vez: quien ya sabe qué es una serie no necesita leerlo cada
+   día, y quien no sabe no puede usar la aplicación sin ello. */
+.glosario{
+  background:var(--gr-850); border:1px solid var(--borde);
+  border-radius:var(--radio); margin-bottom:14px; overflow:hidden;
+}
+.glosario summary{
+  padding:13px 16px; cursor:pointer; font-size:13.5px; font-weight:600;
+  color:var(--az); list-style:none; display:flex; align-items:center; gap:8px;
+}
+.glosario summary::-webkit-details-marker{display:none}
+.glosario summary::after{content:"▾"; margin-left:auto; font-size:12px; color:var(--tx3)}
+.glosario[open] summary::after{content:"▴"}
+.glosario-cu{padding:0 16px 16px; border-top:1px solid var(--borde)}
+.termino{padding:12px 0; border-bottom:1px solid var(--borde)}
+.termino:last-child{border-bottom:none}
+.termino b{display:block; font-size:13.5px; margin-bottom:3px}
+.termino span{font-size:13px; color:var(--tx2); line-height:1.6; display:block}
+.termino .ej{
+  display:inline-block; margin-top:6px; padding:3px 9px; border-radius:6px;
+  background:var(--az-tenue); color:var(--az); font-size:12px; font-weight:600;
+}
+
 .porque{
   font-size:12.5px; color:var(--tx3); line-height:1.6;
   background:var(--gr-850); border:1px solid var(--borde);
@@ -198,6 +232,28 @@ async function reintentarCierrePendiente() {
   } catch { /* sigue pendiente para el próximo intento */ }
 }
 
+/**
+ * Rehace la sesión de hoy para otro lugar.
+ *
+ * Sólo antes de empezar: una vez registrada la primera serie hay trabajo
+ * real que no se puede tirar.
+ */
+async function cambiarLugar(lugar) {
+  if ((rutina.lugar || "gimnasio") === lugar) return;
+
+  vista.innerHTML = '<div class="cargando">Armando la sesión…</div>';
+  try {
+    const r = await api(`/entrenamiento/dia/${hoyISO()}?lugar=${lugar}`);
+    rutina = r.rutina;
+    await Almacen.guardarRutina(rutina);
+    pintar(r.avisos);
+    descargarPaquete();
+  } catch (err) {
+    await cargar();
+    if (err.message) alert(err.message);
+  }
+}
+
 async function descargarPaquete() {
   try {
     const p = await api("/entrenamiento/paquete?dias=3");
@@ -224,7 +280,17 @@ function pintar(avisos = []) {
         <div><b>${rutina.minutos_estimados}</b> min estimados</div>
         <div><b>${hechas}/${rutina.ejercicios.length}</b> completados</div>
       </div>
+
+      ${hechas === 0 ? `
+        <div class="lugares">
+          <button class="${(rutina.lugar || "gimnasio") === "gimnasio" ? "on" : ""}"
+                  onclick="cambiarLugar('gimnasio')">En el gimnasio</button>
+          <button class="${rutina.lugar === "casa" ? "on" : ""}"
+                  onclick="cambiarLugar('casa')">Hoy entreno en casa</button>
+        </div>` : ""}
     </div>
+
+    ${pintarGlosario(rutina)}
 
     ${rutina.justificacion && rutina.justificacion.periodizacion
         ? pintarBloque(rutina.justificacion.periodizacion) : ""}
@@ -256,6 +322,94 @@ function pintar(avisos = []) {
  * semana de descarga parece un error del sistema y la gente la ignora,
  * que es justamente lo que arruina el bloque.
  */
+/**
+ * Qué significa cada número.
+ *
+ * "3 × 8-12 reps" no le dice nada a alguien que nunca fue a un gimnasio,
+ * y esa persona es justamente a quien esta aplicación tiene que servir.
+ * Se abre sola la primera vez y después queda plegada.
+ */
+function pintarGlosario(rutina) {
+  const hayPeso = rutina.ejercicios.some(e => e.peso_sugerido_kg);
+  const haySegundos = rutina.ejercicios.some(e => e.medida === "segundos");
+  const hayMinutos = rutina.ejercicios.some(e => e.medida === "minutos");
+  const primeraVez = !localStorage.getItem("pulso_glosario_visto");
+
+  return `
+    <details class="glosario" ${primeraVez ? "open" : ""} id="glosario"
+             ontoggle="localStorage.setItem('pulso_glosario_visto','1')">
+      <summary>¿Qué significan estos números?</summary>
+      <div class="glosario-cu">
+
+        <div class="termino">
+          <b>Repetición</b>
+          <span>Hacer el movimiento una vez completa: bajar y subir.</span>
+        </div>
+
+        <div class="termino">
+          <b>Serie</b>
+          <span>Un grupo de repeticiones seguidas, sin parar. Entre serie y serie descansás.</span>
+          <span class="ej">3 series de 10 = parás y descansás 2 veces</span>
+        </div>
+
+        <div class="termino">
+          <b>El rango de repeticiones</b>
+          <span>
+            Cuando dice <strong>8 a 12</strong>, es el margen en el que tenés que quedar.
+            Si no llegás a 8, el peso es mucho. Si pasás de 12 con facilidad, es poco
+            y conviene subirlo la próxima vez.
+          </span>
+          <span class="ej">3 × 8-12 = tres series, entre 8 y 12 repeticiones cada una</span>
+        </div>
+
+        ${haySegundos ? `
+        <div class="termino">
+          <b>Los ejercicios que van en segundos</b>
+          <span>
+            Algunos no se repiten: se sostienen. La plancha es uno. Ahí el número no son
+            repeticiones sino <strong>cuántos segundos aguantás la posición</strong>.
+          </span>
+          <span class="ej">2 × 20-35 seg = dos veces, aguantando de 20 a 35 segundos</span>
+        </div>` : ""}
+
+        ${hayMinutos ? `
+        <div class="termino">
+          <b>Los ejercicios que van en minutos</b>
+          <span>El trabajo cardiovascular se mide en tiempo continuo, no en repeticiones.</span>
+          <span class="ej">15 min = quince minutos seguidos a ritmo suave</span>
+        </div>` : ""}
+
+        ${hayPeso ? `
+        <div class="termino">
+          <b>El peso sugerido</b>
+          <span>
+            Es una <strong>sugerencia calculada</strong> a partir de lo que levantaste antes,
+            no una orden. La primera vez con un ejercicio no aparece ninguno: empezá liviano.
+            Si el peso se siente mal, bajalo — vos estás ahí y la aplicación no.
+          </span>
+        </div>` : ""}
+
+        <div class="termino">
+          <b>RPE (el esfuerzo)</b>
+          <span>
+            Del 1 al 10, cuánto te costó la serie. <strong>7 u 8</strong> es lo normal: terminaste
+            pudiendo hacer dos o tres repeticiones más. <strong>10</strong> es no poder ni una más.
+            Este número es el que usa el sistema para decidir cuánto peso ponerte la próxima vez,
+            así que conviene ser honesto.
+          </span>
+        </div>
+
+        <div class="termino">
+          <b>Descanso</b>
+          <span>
+            El tiempo entre una serie y la siguiente. Cuando guardás una serie se abre solo un
+            cronómetro con el descanso que te corresponde.
+          </span>
+        </div>
+      </div>
+    </details>`;
+}
+
 function pintarBloque(p) {
   const barras = Array.from({ length: p.de }, (_, i) => {
     const n = i + 1;
@@ -289,7 +443,7 @@ function pintarEjercicio(e, i) {
         <div class="ej-num">${listo ? "✓" : i + 1}</div>
         <div class="ej-info">
           <b>${esc(e.nombre)}</b>
-          <span>${formatoSerie(e)} · ${NOMBRE_GRUPO[e.grupo] || e.grupo}</span>
+          <span>${formatoSerieLargo(e)}</span>
         </div>
         ${e.peso_sugerido_kg ? `<div class="ej-peso">${e.peso_sugerido_kg}<small>kg</small></div>` : ""}
       </div>
@@ -319,6 +473,23 @@ function pintarEjercicio(e, i) {
         </a>
       </div>
     </div>`;
+}
+
+/**
+ * El mismo dato, escrito en palabras.
+ *
+ * "3 × 8-12 reps" es claro para quien ya entrena y no dice nada para
+ * quien empieza. La versión larga entra igual en una línea.
+ */
+function formatoSerieLargo(e) {
+  const grupo = NOMBRE_GRUPO[e.grupo] || e.grupo;
+  const rango = e.rep_min === e.rep_max ? `${e.rep_min}` : `${e.rep_min} a ${e.rep_max}`;
+
+  if (e.medida === "minutos") return `${rango} minutos seguidos · ${grupo}`;
+
+  const unidad = e.medida === "segundos" ? "segundos sosteniendo" : "repeticiones";
+  const series = e.series === 1 ? "1 serie" : `${e.series} series`;
+  return `${series} de ${rango} ${unidad} · ${grupo}`;
 }
 
 function pintarSerie(e, num, hecha, esTiempo) {

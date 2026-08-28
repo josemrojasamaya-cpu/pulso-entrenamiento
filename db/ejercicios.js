@@ -344,7 +344,162 @@ const EJERCICIOS = [
   ["Gato-camello", "core", "core", "peso_corporal", "principiante", false, false, 1,
    "gato camello ejercicio lumbar",
    "En cuatro apoyos, alterná arquear y redondear la espalda. Movilidad segura para la columna.",
-   []]
+   []],
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  CASA Y CALISTENIA
+  //
+  //  Sin equipo, o con lo que hay en cualquier casa: una silla, una
+  //  pared, una mochila con libros. Existe porque la razón más común
+  //  para abandonar no es la falta de ganas: es no poder ir al gimnasio
+  //  ese día y no tener ninguna alternativa a mano.
+  // ═══════════════════════════════════════════════════════════════════
+
+  // ── Empuje ───────────────────────────────────────────────────────
+  ["Flexiones en rodillas", "pecho", "empuje_horizontal", "peso_corporal", "principiante", false, true, 1,
+   "flexiones de rodillas tecnica",
+   "Apoyando las rodillas en vez de los pies. Cuerpo recto de la cabeza a las rodillas.",
+   ["lesion_hombro"]],
+
+  ["Flexiones contra la pared", "pecho", "empuje_horizontal", "peso_corporal", "principiante", false, true, 1,
+   "flexiones de pared principiantes",
+   "De pie frente a una pared, manos apoyadas a la altura del pecho. La versión más suave que existe: para empezar de cero.",
+   []],
+
+  ["Flexiones diamante", "triceps", "empuje_horizontal", "peso_corporal", "avanzado", false, true, 3,
+   "flexiones diamante tecnica",
+   "Manos juntas formando un rombo bajo el pecho. Carga el tríceps mucho más que la flexión normal.",
+   ["lesion_hombro"]],
+
+  ["Flexiones declinadas", "pecho", "empuje_horizontal", "peso_corporal", "avanzado", false, true, 3,
+   "flexiones declinadas tecnica",
+   "Pies sobre una silla o el sofá. Cuanto más alto el apoyo, más carga sobre el pecho alto y el hombro.",
+   ["lesion_hombro", "hipertension"]],
+
+  ["Flexión en pica", "hombros", "empuje_vertical", "peso_corporal", "avanzado", false, true, 4,
+   "pike push up tecnica",
+   "Cadera en alto formando una V invertida, bajás la cabeza hacia el piso. Es el press de hombros sin pesas.",
+   ["lesion_hombro", "hipertension", "cardiopatia", "embarazo"]],
+
+  // ── Tracción ─────────────────────────────────────────────────────
+  ["Remo invertido bajo una mesa", "espalda", "traccion_horizontal", "peso_corporal", "intermedio", false, true, 2,
+   "remo invertido bajo mesa casa",
+   "Acostado bajo una mesa firme, te agarrás del borde y tirás del pecho hacia arriba. El mejor tirón sin equipo.",
+   []],
+
+  ["Remo con mochila", "espalda", "traccion_horizontal", "peso_corporal", "principiante", true, true, 2,
+   "remo con mochila en casa",
+   "Una mochila con libros o botellas hace de mancuerna. Apoyá una mano en una silla y tirá del codo hacia la cadera.",
+   []],
+
+  ["Superman", "espalda", "core", "peso_corporal", "principiante", false, false, 1,
+   "superman ejercicio espalda tecnica",
+   "Boca abajo, levantás brazos y piernas a la vez y sostenés. Fortalece toda la cadena posterior.",
+   ["embarazo"]],
+
+  ["Retracción de escápulas", "espalda", "traccion_horizontal", "peso_corporal", "principiante", false, false, 1,
+   "retraccion escapular ejercicio casa",
+   "Juntá los omóplatos como si sostuvieras un lápiz entre ellos. Compensa las horas de escritorio.",
+   []],
+
+  // ── Pierna ───────────────────────────────────────────────────────
+  ["Sentadilla búlgara con silla", "cuadriceps", "dominante_rodilla", "peso_corporal", "intermedio", true, true, 3,
+   "sentadilla bulgara en casa silla",
+   "Pie de atrás sobre una silla. Brutal para la pierna y sin necesidad de ningún peso.",
+   ["lesion_rodilla"]],
+
+  ["Sentadilla a una pierna asistida", "cuadriceps", "dominante_rodilla", "peso_corporal", "avanzado", true, true, 4,
+   "pistol squat asistida tecnica",
+   "Bajás con una sola pierna sosteniéndote de una puerta. El paso previo a la sentadilla a una pierna completa.",
+   ["lesion_rodilla", "artritis", "obesidad"]],
+
+  ["Sentadilla isométrica en la pared", "cuadriceps", "dominante_rodilla", "peso_corporal", "principiante", false, false, 2,
+   "sentadilla isometrica pared tecnica",
+   "Espalda contra la pared, rodillas a noventa grados, y sostenés. Quema sin castigar la articulación.",
+   ["lesion_rodilla", "hipertension", "cardiopatia"]],
+
+  ["Zancadas caminando", "cuadriceps", "dominante_rodilla", "peso_corporal", "principiante", true, true, 2,
+   "zancadas caminando tecnica",
+   "Un paso largo tras otro, bajando la rodilla de atrás casi al piso. Alcanza con un pasillo.",
+   ["lesion_rodilla"]],
+
+  ["Puente de glúteos a una pierna", "gluteos", "dominante_cadera", "peso_corporal", "intermedio", true, false, 2,
+   "puente gluteo una pierna tecnica",
+   "El puente normal pero apoyando un solo pie. Excelente para corregir diferencias entre lados.",
+   ["embarazo"]],
+
+  ["Bisagra de cadera sin peso", "femoral", "dominante_cadera", "peso_corporal", "principiante", false, false, 1,
+   "bisagra de cadera hip hinge tecnica",
+   "De pie, llevás la cadera hacia atrás manteniendo la espalda recta. Enseña el movimiento del peso muerto sin riesgo.",
+   ["lesion_lumbar", "hernia"]],
+
+  ["Elevación de talones a una pierna", "pantorrilla", "aislamiento", "peso_corporal", "intermedio", true, false, 1,
+   "elevacion talon una pierna tecnica",
+   "De pie sobre un escalón, con una sola pierna. Sube mucho la carga sin agregar peso.",
+   []],
+
+  ["Sentadilla con salto", "cuadriceps", "cardio", "peso_corporal", "avanzado", false, true, 4,
+   "sentadilla con salto tecnica",
+   "Sentadilla y explotás hacia arriba. Aterrizá suave, primero con la punta del pie.",
+   ["lesion_rodilla", "lesion_lumbar", "artritis", "obesidad", "embarazo", "cardiopatia", "hipertension", "hernia"]],
+
+  // ── Core ─────────────────────────────────────────────────────────
+  ["Plancha con toque de hombro", "core", "core", "peso_corporal", "intermedio", false, false, 2,
+   "plancha toque de hombro tecnica",
+   "En plancha, tocás el hombro contrario alternando sin que la cadera se mueva. Trabajo anti-rotación.",
+   ["lesion_hombro"]],
+
+  ["Hueco abdominal", "core", "core", "peso_corporal", "intermedio", false, false, 2,
+   "hollow hold tecnica correcta",
+   "Boca arriba, lumbar pegada al piso, brazos y piernas estirados sin tocar el suelo. La base del core en calistenia.",
+   ["lesion_lumbar", "hernia", "embarazo"]],
+
+  ["Elevación de piernas acostado", "core", "core", "peso_corporal", "principiante", false, false, 2,
+   "elevacion de piernas acostado tecnica",
+   "Boca arriba, subís las piernas rectas sin despegar la lumbar. Si se despega, doblá un poco las rodillas.",
+   ["lesion_lumbar", "hernia", "embarazo"]],
+
+  ["Escalador lento", "core", "core", "peso_corporal", "principiante", false, false, 1,
+   "mountain climber lento tecnica",
+   "El escalador pero despacio y con control, sin salto. Trabaja el core sin el impacto de la versión rápida.",
+   ["lesion_hombro"]],
+
+  ["Plancha lateral con rodilla apoyada", "core", "core", "peso_corporal", "principiante", true, false, 1,
+   "plancha lateral rodilla apoyada",
+   "Plancha lateral apoyando la rodilla de abajo. La entrada natural cuando la completa todavía no sale.",
+   []],
+
+  // ── Cardio en casa ───────────────────────────────────────────────
+  ["Marcha en el lugar", "cardio", "cardio", "peso_corporal", "principiante", false, false, 1,
+   "marcha en el lugar ejercicio casa",
+   "Caminar sin moverte del sitio, levantando bien las rodillas. Sin impacto y en un metro cuadrado.",
+   []],
+
+  ["Subir y bajar escalón", "cardio", "cardio", "peso_corporal", "principiante", false, true, 2,
+   "step ups escalon ejercicio casa",
+   "Un escalón o un banquito firme. Subí y bajá alternando la pierna. Cardio sin impacto con trabajo de pierna.",
+   ["lesion_rodilla"]],
+
+  ["Sombra de boxeo", "cardio", "cardio", "peso_corporal", "principiante", false, false, 2,
+   "shadow boxing principiantes rutina",
+   "Golpes al aire moviendo los pies. Sube el pulso, es entretenido y no necesita nada.",
+   []],
+
+  // ── Movilidad ────────────────────────────────────────────────────
+  ["Estiramiento de flexores de cadera", "cuerpo_completo", "core", "peso_corporal", "principiante", true, false, 1,
+   "estiramiento flexor cadera tecnica",
+   "Una rodilla en el piso y empujás la cadera hacia adelante. Lo que compensa las horas sentado.",
+   []],
+
+  ["Movilidad de hombro con toalla", "hombros", "core", "peso_corporal", "principiante", false, false, 1,
+   "movilidad hombro con toalla",
+   "Una toalla agarrada con las dos manos, pasándola de adelante hacia atrás por encima de la cabeza.",
+   []],
+
+  ["Rotación torácica en cuadrupedia", "cuerpo_completo", "core", "peso_corporal", "principiante", true, false, 1,
+   "rotacion toracica cuadrupedia",
+   "En cuatro apoyos, una mano en la nuca y abrís el codo hacia el techo. Devuelve movilidad a la espalda alta.",
+   []],
 ];
 
 /**
@@ -362,7 +517,8 @@ const EJERCICIOS = [
 const DE_IMPACTO = new Set([
     "Cuerda para saltar",
     "Burpees",
-    "Escalador (mountain climbers)"
+    "Escalador (mountain climbers)",
+    "Sentadilla con salto"
 ]);
 
 /**
@@ -381,7 +537,10 @@ const EN_SUPINO = new Set([
     "Puente de glúteos",
     "Dead bug",
     "Curl femoral acostado",
-    "Hip thrust con barra"
+    "Hip thrust con barra",
+    "Puente de glúteos a una pierna",
+    "Hueco abdominal",
+    "Elevación de piernas acostado"
 ]);
 
 /**
@@ -394,12 +553,21 @@ const EN_SUPINO = new Set([
 const POR_TIEMPO = new Set([
     "Plancha abdominal",
     "Plancha lateral",
+    "Plancha lateral con rodilla apoyada",
+    "Sentadilla isométrica en la pared",
+    "Hueco abdominal",
+    "Superman",
+    "Retracción de escápulas",
     "Estiramiento de isquiotibiales",
-    "Movilidad de cadera"
+    "Estiramiento de flexores de cadera",
+    "Movilidad de cadera",
+    "Movilidad de hombro con toalla"
 ]);
 
 /** Ejercicios que se miden en MINUTOS (trabajo cardiovascular continuo). */
 const POR_MINUTOS = new Set([
+    "Marcha en el lugar",
+    "Sombra de boxeo",
     "Caminata rápida",
     "Bicicleta estática",
     "Elíptica",
