@@ -116,6 +116,16 @@ const { restricciones, esApto, CONDICIONES } = require("../lib/salud");
                 for (let d = 0; d < 4; d++) {
                     const r = await pedir(`/api/entrenamiento/dia/${dia(d)}`, token);
                     if (r.status !== 200 || !r.d.rutina) continue;
+
+                    // Una sesión ya empezada o completada es historia: se
+                    // generó bajo las condiciones de entonces y no se
+                    // puede reescribir sin borrar trabajo real. La
+                    // invariante vale sobre lo que todavía se puede
+                    // cambiar.
+                    const yaVivida = r.d.rutina.estado === "completada" ||
+                        r.d.rutina.ejercicios.some(e => (e.realizadas || []).length > 0);
+                    if (yaVivida) continue;
+
                     rutinasRevisadas++;
 
                     for (const e of r.d.rutina.ejercicios) {
@@ -184,6 +194,9 @@ const { restricciones, esApto, CONDICIONES } = require("../lib/salud");
     for (let d = 0; d < 7; d++) {
         const r = await pedir(`/api/entrenamiento/dia/${dia(d)}`, token);
         if (!r.d.rutina) continue;
+        // Ver arriba: lo ya entrenado no se reescribe.
+        if (r.d.rutina.estado === "completada" ||
+            r.d.rutina.ejercicios.some(e => (e.realizadas || []).length > 0)) continue;
         for (const e of r.d.rutina.ejercicios) {
             if (!esApto(e, ["embarazo", "lesion_lumbar"], limitesTras).apto) {
                 tras.push(`${dia(d)} ${e.nombre}`);
@@ -251,49 +264,6 @@ const { restricciones, esApto, CONDICIONES } = require("../lib/salud");
         check(`fecha "${f}" responde ${esperado}`, r.status === esperado, `dio ${r.status}`);
     }
 
-    seccion("CICLO DE UNA SESIÓN");
-
-    // Esta sección existe porque el botón "Terminar sesión" nunca
-    // funcionó: la consulta usaba el mismo parámetro en tres contextos y
-    // PostgreSQL la rechazaba entera con un 500. Dos auditorías lo
-    // pasaron por alto porque las dos probaron esa ruta con la red
-    // caída, y ninguna suite recorría el ciclo completo.
-    {
-        const hoy = await pedir(`/api/entrenamiento/dia/${dia(0)}`, token);
-        const rutinaId = hoy.d.rutina && hoy.d.rutina.id;
-        check("hay una rutina para hoy", Boolean(rutinaId));
-
-        for (const estado of ["en_curso", "completada"]) {
-            const r = await pedir(`/api/entrenamiento/rutina/${rutinaId}/estado`, token, {
-                method: "POST", body: { estado }
-            });
-            check(`marcar la sesión como "${estado}" responde 200`,
-                  r.status === 200, `dio ${r.status}: ${r.d.message || ""}`);
-        }
-
-        const tras = await pedir(`/api/entrenamiento/dia/${dia(0)}`, token);
-        check("el estado quedó guardado como completada",
-              tras.d.rutina.estado === "completada", `quedó "${tras.d.rutina.estado}"`);
-        check("y se registró la hora de cierre", Boolean(tras.d.rutina.terminada_en));
-
-        const invalido = await pedir(`/api/entrenamiento/rutina/${rutinaId}/estado`, token, {
-            method: "POST", body: { estado: "inventado" }
-        });
-        check("un estado inventado se rechaza", invalido.status === 400, `dio ${invalido.status}`);
-
-        const ajeno = await pedir(`/api/entrenamiento/rutina/999999/estado`, token, {
-            method: "POST", body: { estado: "completada" } });
-        check("una rutina inexistente responde 404", ajeno.status === 404, `dio ${ajeno.status}`);
-
-        // Volver a marcarla completada no debe otorgar puntos otra vez.
-        const antes = (await pedir(`/api/progreso/${id}/resumen`, token)).d.nivel.puntos;
-        await pedir(`/api/entrenamiento/rutina/${rutinaId}/estado`, token, {
-            method: "POST", body: { estado: "completada" } });
-        const despues = (await pedir(`/api/progreso/${id}/resumen`, token)).d.nivel.puntos;
-        check("completar dos veces no duplica los puntos",
-              antes === despues, `${antes} → ${despues}`);
-    }
-
     seccion("ENTRENAR EN CASA");
 
     {
@@ -303,13 +273,17 @@ const { restricciones, esApto, CONDICIONES } = require("../lib/salud");
             equipo_casa: ["peso_corporal"]
         });
 
-        const gim = await pedir(`/api/entrenamiento/dia/${dia(0)}?lugar=gimnasio`, token);
-        check("la sesión de gimnasio usa el equipo del gimnasio",
+        // Se pasa por casa y se vuelve, para forzar que la sesión se
+        // rehaga: pedir el mismo lugar que ya tiene no regenera nada, y
+        // sin regenerar la prueba estaría mirando una rutina vieja.
+        await pedir(`/api/entrenamiento/dia/${dia(1)}?lugar=casa`, token);
+        const gim = await pedir(`/api/entrenamiento/dia/${dia(1)}?lugar=gimnasio`, token);
+        check("en el gimnasio sí se propone equipo",
               gim.status === 200 &&
               gim.d.rutina.ejercicios.some(e => e.equipo !== "peso_corporal"),
               gim.d.rutina ? gim.d.rutina.ejercicios.map(e => e.equipo).join(",") : "");
 
-        const casa = await pedir(`/api/entrenamiento/dia/${dia(0)}?lugar=casa`, token);
+        const casa = await pedir(`/api/entrenamiento/dia/${dia(1)}?lugar=casa`, token);
         check("cambiar a casa rehace la sesión",
               casa.status === 200 && casa.d.rutina.lugar === "casa",
               `lugar: ${casa.d.rutina && casa.d.rutina.lugar}`);
@@ -322,9 +296,11 @@ const { restricciones, esApto, CONDICIONES } = require("../lib/salud");
         check("la sesión de casa igual queda completa",
               casa.d.rutina.ejercicios.length >= 4, `${casa.d.rutina.ejercicios.length} ejercicios`);
 
-        // Con la sesión empezada no se puede cambiar de lugar: hay
-        // trabajo registrado que se perdería.
-        const primero = casa.d.rutina.ejercicios[0];
+        // Y sobre HOY se comprueba lo contrario: con la sesión empezada
+        // el sistema se niega a rehacerla, porque hay trabajo registrado
+        // que se perdería.
+        const hoyCasa = await pedir(`/api/entrenamiento/dia/${dia(0)}?lugar=casa`, token);
+        const primero = (hoyCasa.d.rutina || casa.d.rutina).ejercicios[0];
         await pedir("/api/entrenamiento/series", token, {
             method: "POST",
             body: { id_local: `casa-${Date.now()}`, ejercicio_id: primero.ejercicio_id,
@@ -376,6 +352,49 @@ const { restricciones, esApto, CONDICIONES } = require("../lib/salud");
             body: JSON.stringify({ username: base.email, password: base.password })
         }).then(r => r.json());
         check("se puede entrar con el correo", Boolean(porCorreo.token));
+    }
+
+    seccion("CICLO DE UNA SESIÓN");
+
+    // Esta sección existe porque el botón "Terminar sesión" nunca
+    // funcionó: la consulta usaba el mismo parámetro en tres contextos y
+    // PostgreSQL la rechazaba entera con un 500. Dos auditorías lo
+    // pasaron por alto porque las dos probaron esa ruta con la red
+    // caída, y ninguna suite recorría el ciclo completo.
+    {
+        const hoy = await pedir(`/api/entrenamiento/dia/${dia(0)}`, token);
+        const rutinaId = hoy.d.rutina && hoy.d.rutina.id;
+        check("hay una rutina para hoy", Boolean(rutinaId));
+
+        for (const estado of ["en_curso", "completada"]) {
+            const r = await pedir(`/api/entrenamiento/rutina/${rutinaId}/estado`, token, {
+                method: "POST", body: { estado }
+            });
+            check(`marcar la sesión como "${estado}" responde 200`,
+                  r.status === 200, `dio ${r.status}: ${r.d.message || ""}`);
+        }
+
+        const tras = await pedir(`/api/entrenamiento/dia/${dia(0)}`, token);
+        check("el estado quedó guardado como completada",
+              tras.d.rutina.estado === "completada", `quedó "${tras.d.rutina.estado}"`);
+        check("y se registró la hora de cierre", Boolean(tras.d.rutina.terminada_en));
+
+        const invalido = await pedir(`/api/entrenamiento/rutina/${rutinaId}/estado`, token, {
+            method: "POST", body: { estado: "inventado" }
+        });
+        check("un estado inventado se rechaza", invalido.status === 400, `dio ${invalido.status}`);
+
+        const ajeno = await pedir(`/api/entrenamiento/rutina/999999/estado`, token, {
+            method: "POST", body: { estado: "completada" } });
+        check("una rutina inexistente responde 404", ajeno.status === 404, `dio ${ajeno.status}`);
+
+        // Volver a marcarla completada no debe otorgar puntos otra vez.
+        const antes = (await pedir(`/api/progreso/${id}/resumen`, token)).d.nivel.puntos;
+        await pedir(`/api/entrenamiento/rutina/${rutinaId}/estado`, token, {
+            method: "POST", body: { estado: "completada" } });
+        const despues = (await pedir(`/api/progreso/${id}/resumen`, token)).d.nivel.puntos;
+        check("completar dos veces no duplica los puntos",
+              antes === despues, `${antes} → ${despues}`);
     }
 
     seccion("PERMISOS");
