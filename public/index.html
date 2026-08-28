@@ -2,11 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Forja</title>
+<title>Pulso</title>
 <script>
   try {
-    var t = localStorage.getItem("forja_token");
-    var u = JSON.parse(localStorage.getItem("forja_usuario") || "null");
+    var t = localStorage.getItem("pulso_token");
+    var u = JSON.parse(localStorage.getItem("pulso_usuario") || "null");
     var destino = !t || !u ? "login.html"
                 : (u.rol === "entrenador" || u.rol === "admin") ? "entrenador.html"
                 : "hoy.html";

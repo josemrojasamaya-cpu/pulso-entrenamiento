@@ -4,8 +4,8 @@
 
 const Sesion = {
   guardar(token, usuario) {
-    localStorage.setItem("forja_token", token);
-    localStorage.setItem("forja_usuario", JSON.stringify(usuario));
+    localStorage.setItem("pulso_token", token);
+    localStorage.setItem("pulso_usuario", JSON.stringify(usuario));
     // Con sesión nueva se vuelve a habilitar el envío: si había series
     // esperando porque la anterior había vencido, salen ahora.
     if (window.Almacen) {
@@ -13,9 +13,9 @@ const Sesion = {
       Almacen.sincronizar().catch(() => {});
     }
   },
-  token()   { return localStorage.getItem("forja_token"); },
+  token()   { return localStorage.getItem("pulso_token"); },
   usuario() {
-    try { return JSON.parse(localStorage.getItem("forja_usuario") || "null"); }
+    try { return JSON.parse(localStorage.getItem("pulso_usuario") || "null"); }
     catch { return null; }
   },
   /**
@@ -39,8 +39,8 @@ const Sesion = {
         if (!seguir) return;
       }
     }
-    localStorage.removeItem("forja_token");
-    localStorage.removeItem("forja_usuario");
+    localStorage.removeItem("pulso_token");
+    localStorage.removeItem("pulso_usuario");
     location.href = "login.html";
   },
   exigir() {
@@ -198,7 +198,7 @@ function pintarEstructura(activo) {
     top.innerHTML = `
       <div class="top-in">
         <a class="marca" href="hoy.html">
-          <div class="marca-i">F</div><b>Forja</b>
+          <div class="marca-i">F</div><b>Pulso</b>
         </a>
         <div class="der">
           <div class="usuario-chip">

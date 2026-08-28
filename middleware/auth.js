@@ -13,7 +13,7 @@ const pool = require("../config/db");
  * de ese entrenador no debe seguir sirviendo.
  */
 
-const SECRETO = process.env.JWT_SECRET || "forja-desarrollo-local";
+const SECRETO = process.env.JWT_SECRET || "pulso-desarrollo-local";
 const VIGENCIA = "30d";   // en el celular, pedir sesión cada 8 h es inusable
 
 if (!process.env.JWT_SECRET) {

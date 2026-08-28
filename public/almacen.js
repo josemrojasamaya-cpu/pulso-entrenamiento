@@ -28,7 +28,7 @@
       anotarlo.
    ===================================================================== */
 
-const BD_NOMBRE = "forja";
+const BD_NOMBRE = "pulso";
 const BD_VERSION = 2;
 
 // Tamaño máximo por envío. El servidor rechaza lotes grandes con un
@@ -74,7 +74,7 @@ function abrirBD() {
         p.onerror = () => rechazar(p.error);
         // Con dos pestañas abiertas, una migración de esquema queda
         // bloqueada. Sin este manejo, la promesa no se resolvía nunca.
-        p.onblocked = () => rechazar(new Error("Hay otra pestaña de Forja abierta. Cerrala y volvé a intentar."));
+        p.onblocked = () => rechazar(new Error("Hay otra pestaña de Pulso abierta. Cerrala y volvé a intentar."));
     });
 }
 
@@ -99,7 +99,7 @@ function nuevoIdLocal() {
 /** Quién está usando la aplicación ahora mismo. */
 function duenoActual() {
     try {
-        const u = JSON.parse(localStorage.getItem("forja_usuario") || "null");
+        const u = JSON.parse(localStorage.getItem("pulso_usuario") || "null");
         return u && u.id ? Number(u.id) : null;
     } catch { return null; }
 }
@@ -217,7 +217,7 @@ const Almacen = {
             return { enviadas: 0, motivo: "ya en curso" };
         }
 
-        if (!localStorage.getItem("forja_token")) return { enviadas: 0, motivo: "sin sesión" };
+        if (!localStorage.getItem("pulso_token")) return { enviadas: 0, motivo: "sin sesión" };
         if (this._sesionRechazada) {
             return { enviadas: 0, motivo: "la sesión venció; los datos siguen guardados" };
         }
@@ -270,7 +270,7 @@ const Almacen = {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": "Bearer " + (localStorage.getItem("forja_token") || "")
+                "Authorization": "Bearer " + (localStorage.getItem("pulso_token") || "")
             },
             body: JSON.stringify({ series: cuerpo })
         });

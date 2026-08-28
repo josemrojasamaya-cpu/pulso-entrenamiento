@@ -25,7 +25,7 @@
 // La versión se cambia a mano en cada despliegue que toque estos
 // archivos. Si no cambia, `activate` no borra las cachés viejas y la
 // corrección desplegada nunca llega.
-const VERSION = "forja-v3";
+const VERSION = "pulso-v8";
 const CACHE_APP = `${VERSION}-app`;
 
 const ARCHIVOS = [
@@ -38,11 +38,13 @@ const ARCHIVOS = [
     "/ranking.html",
     "/entrenador.html",
     "/login.html",
+    "/terminos.html",
     "/estilos.css",
     "/comun.js",
     "/almacen.js",
     "/manifest.json",
-    "/icono.svg"
+    "/icono.svg",
+    "/fondo.svg"
 ];
 
 self.addEventListener("install", (e) => {

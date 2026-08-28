@@ -8,9 +8,9 @@ const { Pool } = require("pg");
  */
 const DB_URL =
     process.env.DATABASE_URL ||
-    "postgres://postgres:postgres@localhost:5432/forja";
+    "postgres://postgres:postgres@localhost:5432/pulso";
 
-const ESQUEMA = process.env.DB_SCHEMA || "forja";
+const ESQUEMA = process.env.DB_SCHEMA || "pulso";
 
 /**
  * El SSL se decide por el destino, no por la existencia de la variable:

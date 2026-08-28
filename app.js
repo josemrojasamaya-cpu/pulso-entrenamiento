@@ -1,5 +1,5 @@
 /**
- * Forja — entrenador adaptativo.
+ * Pulso — entrenador adaptativo.
  *
  * Sirve la interfaz (una PWA instalable) y expone la API.
  */
@@ -93,6 +93,6 @@ async function prepararBase() {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Forja escuchando en el puerto ${PORT}`);
+    console.log(`Pulso escuchando en el puerto ${PORT}`);
     prepararBase();
 });

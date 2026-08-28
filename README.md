@@ -1,10 +1,10 @@
-# Forja — entrenador adaptativo
+# Pulso — entrenador adaptativo
 
 Aplicación web instalable (PWA) que **arma la rutina de cada día** según las
 medidas corporales, las condiciones de salud y el objetivo de cada persona.
 Funciona sin conexión, porque los gimnasios suelen estar en sótanos.
 
-**[Ver funcionando](https://forja-entrenamiento.onrender.com)** · cuentas de
+**[Ver funcionando](https://pulso-entrenamiento.onrender.com)** · cuentas de
 demostración en la propia pantalla de acceso.
 
 ---
@@ -137,15 +137,15 @@ Sin librerías de gráficos: los SVG se generan a mano.
 
 ```bash
 npm install
-DATABASE_URL=postgres://usuario:clave@localhost:5432/forja npm run setup
-DATABASE_URL=postgres://usuario:clave@localhost:5432/forja npm start
+DATABASE_URL=postgres://usuario:clave@localhost:5432/pulso npm run setup
+DATABASE_URL=postgres://usuario:clave@localhost:5432/pulso npm start
 ```
 
 | Variable | Para qué |
 |---|---|
 | `DATABASE_URL` | Conexión a PostgreSQL. Sin ella, usa localhost. |
 | `JWT_SECRET` | Firma de los tokens. **Definirla en producción.** |
-| `DB_SCHEMA` | Esquema de las tablas (por omisión `forja`). |
+| `DB_SCHEMA` | Esquema de las tablas (por omisión `pulso`). |
 | `PORT` | Puerto del servidor. |
 
 Si la base está vacía al arrancar, el servidor aplica el esquema y carga el

@@ -1,12 +1,12 @@
 -- =====================================================================
---  Forja · esquema de base de datos
+--  Pulso · esquema de base de datos
 --
 --  Idempotente: se puede correr sobre una base vacía o sobre una ya
 --  instalada sin perder datos.
 -- =====================================================================
 
-CREATE SCHEMA IF NOT EXISTS forja;
-SET search_path TO forja, public;
+CREATE SCHEMA IF NOT EXISTS pulso;
+SET search_path TO pulso, public;
 
 
 -- ---------------------------------------------------------------------
@@ -30,6 +30,39 @@ CREATE TABLE IF NOT EXISTS usuarios (
 );
 
 CREATE INDEX IF NOT EXISTS idx_usr_entrenador ON usuarios (entrenador_id);
+
+-- Datos del registro. El correo es único: es la forma de recuperar una
+-- cuenta y de evitar que la misma persona se registre dos veces.
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS telefono VARCHAR(40);
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS plan VARCHAR(20) NOT NULL DEFAULT 'gratis';
+    -- gratis | mensual | trimestral
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS plan_vence DATE;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS codigo_invitacion VARCHAR(12);
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS invitado_por INTEGER REFERENCES usuarios(id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_usr_email
+    ON usuarios (LOWER(email)) WHERE email IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_usr_codigo
+    ON usuarios (codigo_invitacion) WHERE codigo_invitacion IS NOT NULL;
+
+-- ---------------------------------------------------------------------
+--  Consentimientos
+--
+--  Qué versión de los términos aceptó cada persona y cuándo. Se guarda
+--  como registro aparte y no como un booleano en la cuenta: si los
+--  términos cambian, hay que poder demostrar qué texto aceptó cada quien
+--  y en qué momento. Un `acepto = true` no responde ninguna de las dos
+--  preguntas.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS consentimientos (
+    id          SERIAL PRIMARY KEY,
+    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    documento   VARCHAR(40) NOT NULL,      -- terminos | privacidad | salud
+    version     VARCHAR(20) NOT NULL,
+    aceptado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ip          VARCHAR(60),
+    UNIQUE (usuario_id, documento, version)
+);
 
 
 -- ---------------------------------------------------------------------

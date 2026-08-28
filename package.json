@@ -1,5 +1,5 @@
 {
-  "name": "forja-entrenamiento",
+  "name": "pulso-entrenamiento",
   "version": "1.0.0",
   "description": "Entrenador adaptativo: genera la rutina de cada dia segun las medidas, las condiciones de salud y el objetivo de la persona. PWA instalable con trabajo sin conexion.",
   "main": "app.js",

@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 900"
+     preserveAspectRatio="xMidYMid slice" role="presentation">
+  <!--
+    Fondo de la portada: silueta a contraluz de alguien terminando un
+    peso muerto, con la barra en alto.
+
+    La clave es el contraluz. Una silueta negra sobre un fondo oscuro no
+    se ve —es negro sobre negro—, así que detrás va un resplandor que la
+    recorta. Es el efecto de una lámpara de gimnasio a espaldas de quien
+    entrena.
+
+    Va en SVG y no como fotografía porque pesa unos pocos kilobytes en
+    lugar de varios cientos, se ve nítido en cualquier pantalla, funciona
+    sin conexión y no depende de licencias de terceros.
+  -->
+  <defs>
+    <linearGradient id="ambiente" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%"   stop-color="#16283a"/>
+      <stop offset="50%"  stop-color="#0d1825"/>
+      <stop offset="100%" stop-color="#070b11"/>
+    </linearGradient>
+
+    <!-- El contraluz: sin esto la figura no existe. -->
+    <radialGradient id="contraluz" cx="0.5" cy="0.46" r="0.42">
+      <stop offset="0%"   stop-color="#a7d0f8" stop-opacity=".95"/>
+      <stop offset="22%"  stop-color="#5c9ce8" stop-opacity=".68"/>
+      <stop offset="52%"  stop-color="#2c62aa" stop-opacity=".34"/>
+      <stop offset="100%" stop-color="#12304f" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="piso-luz" cx="0.5" cy="1" r="0.55">
+      <stop offset="0%"   stop-color="#4a8ee0" stop-opacity=".3"/>
+      <stop offset="100%" stop-color="#4a8ee0" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="borde" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#9ecbf7" stop-opacity=".9"/>
+      <stop offset="60%"  stop-color="#4a8ee0" stop-opacity=".45"/>
+      <stop offset="100%" stop-color="#2c62aa" stop-opacity=".18"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1900" height="900" fill="url(#ambiente)"/>
+
+  <!-- Resplandor de apoyo en el lado opuesto: equilibra la composición
+       sin agregar otra figura que compita. -->
+  <ellipse cx="330" cy="560" rx="380" ry="330" fill="url(#contraluz)" opacity=".35"/>
+  <g transform="translate(1490 500) scale(0.95) translate(-600 -470)">
+  <ellipse cx="600" cy="414" rx="520" ry="440" fill="url(#contraluz)"/>
+  <ellipse cx="600" cy="880" rx="480" ry="160" fill="url(#piso-luz)"/>
+
+  <!--
+    Figura recortada, de pie al final de un peso muerto: barra a la
+    altura de la cadera, brazos extendidos, espalda recta.
+    Todo en un solo color muy oscuro; el volumen lo da el contraluz.
+  -->
+  <g fill="#05080c">
+
+    <!-- Discos y barra, sostenidos abajo -->
+    <rect x="292" y="520" width="616" height="15" rx="7.5"/>
+    <rect x="268" y="452" width="30" height="152" rx="15"/>
+    <rect x="228" y="470" width="26" height="116" rx="13"/>
+    <rect x="902" y="452" width="30" height="152" rx="15"/>
+    <rect x="946" y="470" width="26" height="116" rx="13"/>
+
+    <!-- Cabeza y cuello -->
+    <circle cx="600" cy="196" r="42"/>
+    <rect x="584" y="232" width="32" height="26" rx="12"/>
+
+    <!-- Trapecio y hombros -->
+    <path d="M600 250
+             c-46 0 -86 12 -110 32
+             c-14 12 -20 26 -18 40
+             l6 34
+             h244
+             l6 -34
+             c2 -14 -4 -28 -18 -40
+             c-24 -20 -64 -32 -110 -32 Z"/>
+
+    <!-- Tronco: ancho arriba, angosto en la cintura -->
+    <path d="M478 356
+             h244
+             l-14 96
+             c-4 26 -18 44 -40 50
+             l-8 2
+             h-120
+             l-8 -2
+             c-22 -6 -36 -24 -40 -50
+             Z"/>
+
+    <!-- Brazo izquierdo, extendido hasta la barra -->
+    <path d="M486 300
+             c-22 4 -38 18 -42 38
+             l-22 158
+             c-3 20 8 32 26 32
+             c16 0 27 -10 29 -28
+             l20 -146
+             c2 -14 8 -22 18 -26 Z"/>
+    <!-- Antebrazo y mano izquierda sobre la barra -->
+    <path d="M424 512 h44 c9 0 15 7 15 16 c0 9 -6 16 -15 16 h-44 c-9 0 -15 -7 -15 -16 c0 -9 6 -16 15 -16 Z"/>
+
+    <!-- Brazo derecho -->
+    <path d="M714 300
+             c22 4 38 18 42 38
+             l22 158
+             c3 20 -8 32 -26 32
+             c-16 0 -27 -10 -29 -28
+             l-20 -146
+             c-2 -14 -8 -22 -18 -26 Z"/>
+    <path d="M776 512 h-44 c-9 0 -15 7 -15 16 c0 9 6 16 15 16 h44 c9 0 15 -7 15 -16 c0 -9 -6 -16 -15 -16 Z"/>
+
+    <!-- Cadera -->
+    <path d="M512 504 h176 l10 56 c2 14 -6 24 -20 24 h-156 c-14 0 -22 -10 -20 -24 Z"/>
+
+    <!-- Pierna izquierda -->
+    <path d="M534 584
+             c-18 2 -30 14 -32 32
+             l-14 128
+             c-2 18 8 30 26 30
+             c16 0 27 -10 29 -28
+             l16 -122
+             h-25 Z"/>
+    <path d="M514 762 l-6 40 c-2 16 8 26 24 26 c15 0 25 -9 26 -24 l5 -42 Z"/>
+
+    <!-- Pierna derecha -->
+    <path d="M666 584
+             c18 2 30 14 32 32
+             l14 128
+             c2 18 -8 30 -26 30
+             c-16 0 -27 -10 -29 -28
+             l-16 -122
+             h25 Z"/>
+    <path d="M686 762 l6 40 c2 16 -8 26 -24 26 c-15 0 -25 -9 -26 -24 l-5 -42 Z"/>
+
+    <!-- Pies -->
+    <path d="M494 812 h72 c11 0 18 8 16 18 c-2 9 -9 14 -18 14 h-82 c-11 0 -18 -8 -16 -18 c2 -9 12 -14 28 -14 Z"/>
+    <path d="M706 812 h-72 c-11 0 -18 8 -16 18 c2 9 9 14 18 14 h82 c11 0 18 -8 16 -18 c-2 -9 -12 -14 -28 -14 Z"/>
+  </g>
+
+  <!-- Filo de luz sobre el contorno: es lo que hace legible la silueta -->
+  <g fill="none" stroke="url(#borde)" stroke-width="4" stroke-linecap="round">
+    <path d="M558 200 a42 42 0 0 1 42 -42"/>
+    <path d="M490 282 c24 -20 64 -32 110 -32"/>
+    <path d="M478 356 l-14 96"/>
+    <path d="M486 300 c-22 4 -38 18 -42 38 l-22 158"/>
+    <path d="M534 584 c-18 2 -30 14 -32 32 l-14 128"/>
+    <path d="M642 200 a42 42 0 0 0 -42 -42"/>
+    <path d="M710 282 c-24 -20 -64 -32 -110 -32"/>
+    <path d="M722 356 l14 96"/>
+    <path d="M714 300 c22 4 38 18 42 38 l22 158"/>
+    <path d="M666 584 c18 2 30 14 32 32 l14 128"/>
+    <path d="M292 527 h616" opacity=".6"/>
+  </g>
+
+  <!-- Trazo de latido: el guiño al nombre, cruzando la escena -->
+  <path d="M-500 690 H286 L322 606 L372 774 L424 556 L474 716 L512 690 H1500"
+        fill="none" stroke="#4a8ee0" stroke-width="3"
+        stroke-linecap="round" stroke-linejoin="round" opacity=".42"/>
+
+  <!-- Piso -->
+  <rect x="140" y="848" width="920" height="2" fill="#4a8ee0" opacity=".35"/>
+  </g>
+</svg>

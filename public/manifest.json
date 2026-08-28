@@ -1,6 +1,6 @@
 {
-  "name": "Forja · Entrenamiento",
-  "short_name": "Forja",
+  "name": "Pulso · Entrenamiento",
+  "short_name": "Pulso",
   "description": "Tu rutina de cada día, adaptada a tus medidas, tus condiciones de salud y tu objetivo. Funciona sin conexión.",
   "start_url": "/hoy.html",
   "scope": "/",
