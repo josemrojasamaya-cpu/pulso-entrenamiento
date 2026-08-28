@@ -4,6 +4,35 @@ const { requiereSesion, exigirAccesoAtleta } = require("../middleware/auth");
 const { catalogoCondiciones, restricciones } = require("../lib/salud");
 
 const router = express.Router();
+
+/**
+ * Descarta las rutinas futuras que todavía no se empezaron.
+ *
+ * Se llama cuando cambian las condiciones de salud o el perfil, porque
+ * los dos alteran qué ejercicios corresponden y con qué parámetros. Las
+ * rutinas se generan hasta con siete días de anticipación: sin esto,
+ * quien declara un embarazo el lunes sigue recibiendo hasta el domingo
+ * el plan que se armó cuando no lo había declarado.
+ *
+ * Las que ya tienen series registradas NO se tocan: ahí hay trabajo real
+ * que no se puede perder. Esas se revisan al abrirlas y se corrigen en
+ * el lugar o se avisa.
+ */
+async function descartarPlanFuturo(usuarioId) {
+    const r = await pool.query(
+        `DELETE FROM rutinas r
+          WHERE r.usuario_id = $1
+            AND r.fecha >= CURRENT_DATE
+            AND r.estado = 'pendiente'
+            AND NOT EXISTS (
+                SELECT 1 FROM series s
+                  JOIN rutina_ejercicios re ON re.id = s.rutina_ejercicio_id
+                 WHERE re.rutina_id = r.id)
+          RETURNING r.id`,
+        [usuarioId]
+    );
+    return r.rowCount;
+}
 router.use(requiereSesion);
 
 /** Condiciones que el formulario puede ofrecer. */
@@ -101,7 +130,14 @@ router.put("/:id/perfil", exigirAccesoAtleta, async (req, res) => {
                 Array.isArray(b.dias_disponibles) ? JSON.stringify(b.dias_disponibles) : null
             ]
         );
-        res.json({ ok: true });
+        const rehechas = await descartarPlanFuturo(req.atletaId);
+        res.json({
+            ok: true,
+            rutinas_rehechas: rehechas,
+            ...(rehechas ? {
+                mensaje: `Se rehará el plan de los próximos ${rehechas} día(s) con tus datos nuevos.`
+            } : {})
+        });
     } catch (err) {
         console.error("[PERFIL] guardar:", err.message);
         res.status(500).json({ message: "No se pudo guardar el perfil." });
@@ -133,8 +169,18 @@ router.put("/:id/condiciones", exigirAccesoAtleta, async (req, res) => {
         }
         await cliente.query("COMMIT");
 
-        const codigos = lista.map(c => (typeof c === "string" ? c : c.codigo)).filter(c => validos.includes(c));
-        res.json({ ok: true, limites: restricciones(codigos) });
+        // El plan futuro se rehace con las condiciones nuevas.
+        const rehechas = await descartarPlanFuturo(req.atletaId);
+
+        const activas = lista
+            .map(c => (typeof c === "string" ? { codigo: c, severidad: "moderada" } : c))
+            .filter(c => validos.includes(c.codigo));
+
+        res.json({
+            ok: true,
+            limites: restricciones(activas),
+            rutinas_rehechas: rehechas
+        });
     } catch (err) {
         await cliente.query("ROLLBACK").catch(() => {});
         console.error("[CONDICIONES]", err.message);

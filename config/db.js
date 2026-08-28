@@ -82,7 +82,6 @@ async function fijarEsquemaEnLaBase() {
         return false;
     }
 }
-module.exports.fijarEsquemaEnLaBase = fijarEsquemaEnLaBase;
 
 pool.query("SELECT 1")
     .then(() => console.log("[DB] conexión verificada"))
@@ -90,3 +89,4 @@ pool.query("SELECT 1")
 
 module.exports = pool;
 module.exports.ESQUEMA = ESQUEMA;
+module.exports.fijarEsquemaEnLaBase = fijarEsquemaEnLaBase;

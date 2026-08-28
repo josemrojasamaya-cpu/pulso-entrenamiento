@@ -28,21 +28,50 @@ function firmarToken(u) {
     );
 }
 
-function requiereSesion(req, res, next) {
+/**
+ * Exige una sesión válida.
+ *
+ * El token sólo aporta la identidad; **el rol y el estado de la cuenta se
+ * leen de la base en cada petición**. Con tokens de treinta días, confiar
+ * en el rol que trae el token significaba que degradar a alguien de
+ * administrador, o desactivar su cuenta, no tenía efecto hasta un mes
+ * después. La comprobación de `activo` sólo ocurría en el login.
+ */
+async function requiereSesion(req, res, next) {
     const cabecera = req.get("authorization") || "";
     const token = cabecera.startsWith("Bearer ") ? cabecera.slice(7) : null;
 
     if (!token) return res.status(401).json({ message: "Se requiere iniciar sesión." });
 
+    let carga;
     try {
-        req.usuario = jwt.verify(token, SECRETO);
-        next();
+        carga = jwt.verify(token, SECRETO);
     } catch (err) {
         const expirado = err.name === "TokenExpiredError";
-        res.status(401).json({
+        return res.status(401).json({
             message: expirado ? "La sesión venció. Entrá de nuevo." : "Sesión inválida.",
             expirado
         });
+    }
+
+    try {
+        const r = await pool.query(
+            "SELECT id, username, rol, nombre, activo FROM usuarios WHERE id = $1",
+            [carga.id]
+        );
+        const u = r.rows[0];
+
+        if (!u || !u.activo) {
+            return res.status(401).json({
+                message: "Tu cuenta ya no está activa. Hablá con el administrador."
+            });
+        }
+
+        req.usuario = { id: u.id, username: u.username, rol: u.rol, nombre: u.nombre };
+        next();
+    } catch (err) {
+        console.error("[AUTH] no se pudo verificar la cuenta:", err.message);
+        res.status(503).json({ message: "No se pudo verificar la sesión. Probá de nuevo." });
     }
 }
 

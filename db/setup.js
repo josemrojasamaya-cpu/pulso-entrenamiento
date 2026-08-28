@@ -13,7 +13,8 @@ const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcryptjs");
 const pool = require("../config/db");
-const { EJERCICIOS, enlaceVideo, medidaDe, POR_TIEMPO, POR_MINUTOS } = require("./ejercicios");
+const { EJERCICIOS, enlaceVideo, medidaDe, POR_TIEMPO, POR_MINUTOS,
+        DE_IMPACTO, EN_SUPINO } = require("./ejercicios");
 const { estimar1RM } = require("../lib/progresion");
 
 // Cuentas de demostración: se muestran en la pantalla de acceso a
@@ -180,8 +181,9 @@ async function main({ cerrarPool = true, silencioso = false } = {}) {
             if (r.rowCount) nuevosEj++;
         }
 
-        // La unidad se corrige también en bases ya instaladas, donde la
-        // columna nació con el valor por omisión.
+        // Estas marcas se aplican también sobre bases ya instaladas, donde
+        // las columnas nacieron con su valor por omisión. Corren siempre:
+        // son la fuente de verdad del catálogo.
         await pool.query(
             "UPDATE ejercicios SET medida = 'segundos' WHERE nombre = ANY($1::varchar[]) AND medida <> 'segundos'",
             [[...POR_TIEMPO]]
@@ -190,6 +192,20 @@ async function main({ cerrarPool = true, silencioso = false } = {}) {
             "UPDATE ejercicios SET medida = 'minutos' WHERE nombre = ANY($1::varchar[]) AND medida <> 'minutos'",
             [[...POR_MINUTOS]]
         );
+        await pool.query("UPDATE ejercicios SET impacto = (nombre = ANY($1::varchar[]))", [[...DE_IMPACTO]]);
+        await pool.query("UPDATE ejercicios SET supino  = (nombre = ANY($1::varchar[]))", [[...EN_SUPINO]]);
+
+        // Las contraindicaciones y la clasificación del catálogo se
+        // reescriben en cada instalación: una revisión del catálogo tiene
+        // que llegar a las bases que ya existen, no sólo a las nuevas.
+        for (const e of EJERCICIOS) {
+            await pool.query(
+                `UPDATE ejercicios
+                    SET contraindicado_en = $2::jsonb, grupo = $3, patron = $4, exigencia = $5
+                  WHERE nombre = $1::varchar`,
+                [e[0], JSON.stringify(e[10]), e[1], e[2], e[7]]
+            );
+        }
         log(`  ejercicios: ${nuevosEj} nuevos (${EJERCICIOS.length} en el catálogo)`);
 
         // ── 3. Cuentas ────────────────────────────────────────────

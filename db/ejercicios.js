@@ -125,7 +125,10 @@ const EJERCICIOS = [
   ["Elevaciones frontales", "hombros", "aislamiento", "mancuernas", "principiante", false, false, 1,
    "elevaciones frontales mancuernas tecnica",
    "Subí al frente hasta la altura de los ojos. Sin impulso de cadera.",
-   []],
+   // Pasar los 90 grados de flexión es la posición de pinzamiento. Las
+   // elevaciones laterales paran en la línea del hombro y son seguras;
+   // esta no.
+   ["lesion_hombro"]],
 
   ["Pájaros para deltoide posterior", "hombros", "aislamiento", "mancuernas", "principiante", false, false, 1,
    "pajaros deltoide posterior tecnica",
@@ -198,12 +201,16 @@ const EJERCICIOS = [
   ["Prensa de piernas", "cuadriceps", "dominante_rodilla", "maquina", "principiante", false, true, 3,
    "prensa de piernas tecnica",
    "No bloquees la rodilla arriba ni dejes que la cadera se despegue abajo.",
-   ["lesion_rodilla", "hipertension"]],
+   // En el fondo del recorrido la pelvis rota hacia atrás con la lumbar
+   // apoyada contra el respaldo y la carga empujando hacia la flexión.
+   // Es peor que en sentadilla libre, porque el respaldo impide la
+   // compensación natural del tronco.
+   ["lesion_rodilla", "hipertension", "lesion_lumbar", "hernia", "embarazo"]],
 
   ["Estocadas con mancuernas", "cuadriceps", "dominante_rodilla", "mancuernas", "intermedio", true, true, 3,
    "estocadas mancuernas tecnica",
    "Paso largo, rodilla de atrás casi al piso. Trabaja también el equilibrio y corrige asimetrías.",
-   ["lesion_rodilla"]],
+   ["lesion_rodilla", "lesion_lumbar"]],
 
   ["Extensión de cuádriceps", "cuadriceps", "aislamiento", "maquina", "principiante", false, false, 2,
    "extension cuadriceps maquina tecnica",
@@ -223,7 +230,10 @@ const EJERCICIOS = [
   ["Hip thrust con barra", "gluteos", "dominante_cadera", "barra", "intermedio", false, true, 3,
    "hip thrust tecnica correcta",
    "Espalda alta apoyada en un banco. El mejor ejercicio para glúteo con carga.",
-   ["hernia", "embarazo"]],
+   // Extensión de cadera con carga máxima y una barra sobre la pelvis:
+   // de los movimientos del catálogo más asociados a aguantar la
+   // respiración haciendo fuerza.
+   ["hernia", "embarazo", "hipertension", "cardiopatia"]],
 
   ["Elevación de talones", "pantorrilla", "aislamiento", "peso_corporal", "principiante", false, false, 1,
    "elevacion de talones pantorrilla",
@@ -244,12 +254,15 @@ const EJERCICIOS = [
   ["Plancha lateral", "core", "core", "peso_corporal", "principiante", true, false, 1,
    "plancha lateral tecnica",
    "Apoyo en un antebrazo, cadera arriba. Trabaja el oblicuo y estabiliza la columna.",
-   []],
+   // Mismo mecanismo que la plancha frontal -isométrico sostenido con
+   // respuesta presora- y con más tendencia a la apnea, porque la
+   // posición es menos estable. Si una está bloqueada, la otra también.
+   ["hipertension"]],
 
   ["Elevación de piernas colgado", "core", "core", "peso_corporal", "avanzado", false, false, 3,
    "elevacion piernas colgado tecnica",
    "Colgado de la barra, subí las piernas sin balancearte. Muy exigente.",
-   ["lesion_hombro", "hernia", "lesion_lumbar"]],
+   ["lesion_hombro", "hernia", "lesion_lumbar", "hipertension", "embarazo"]],
 
   ["Dead bug", "core", "core", "peso_corporal", "principiante", false, false, 1,
    "dead bug ejercicio tecnica",
@@ -290,17 +303,27 @@ const EJERCICIOS = [
   ["Cuerda para saltar", "cardio", "cardio", "peso_corporal", "intermedio", false, false, 3,
    "saltar la cuerda tecnica principiantes",
    "Saltos bajos, aterrizando en la punta del pie. Alta demanda cardiovascular en poco espacio.",
-   ["lesion_rodilla", "artritis", "obesidad", "embarazo"]],
+   ["lesion_rodilla", "artritis", "obesidad", "embarazo", "lesion_lumbar", "hernia", "cardiopatia"]],
 
   ["Burpees", "cuerpo_completo", "cardio", "peso_corporal", "avanzado", false, true, 5,
    "burpees tecnica correcta",
    "Sentadilla, plancha, flexión, salto. El ejercicio con peor relación entre lo que cuesta y lo que la gente lo disfruta.",
-   ["lesion_rodilla", "lesion_hombro", "cardiopatia", "hipertension", "artritis", "obesidad", "embarazo", "asma"]],
+   // Se declaran explícitamente aunque la exigencia 5 ya los excluya de
+   // casi todos: depender de un umbral numérico significa que cambiarlo
+   // desbloquea ejercicios contraindicados sin que nadie se entere.
+   ["lesion_rodilla", "lesion_hombro", "cardiopatia", "hipertension", "artritis", "obesidad", "embarazo", "asma", "lesion_lumbar", "hernia"]],
 
-  ["Escalador (mountain climbers)", "core", "cardio", "peso_corporal", "intermedio", false, false, 3,
+  // Estaba clasificado en el grupo `core`, y TODAS las plantillas tienen
+  // una ranura de core: por eso aparecía todos los días seguidos, incluso
+  // en la cuenta con hernia lumbar. Es trabajo cardiovascular, no core:
+  // cuando el core se fatiga, la pelvis cae y cada repetición la absorbe
+  // la zona lumbar. Contradecía el propio aviso de esa condición, que
+  // dice que el core se trabaja resistiendo el movimiento, no doblando
+  // la espalda.
+  ["Escalador (mountain climbers)", "cardio", "cardio", "peso_corporal", "intermedio", false, false, 3,
    "mountain climbers tecnica",
    "En plancha, llevá las rodillas al pecho alternando. Cadera baja todo el tiempo.",
-   ["lesion_hombro", "lesion_rodilla"]],
+   ["lesion_hombro", "lesion_rodilla", "lesion_lumbar", "hernia", "embarazo", "obesidad"]],
 
   ["Swing con kettlebell", "gluteos", "dominante_cadera", "kettlebell", "intermedio", false, true, 4,
    "swing kettlebell tecnica correcta",
@@ -323,6 +346,43 @@ const EJERCICIOS = [
    "En cuatro apoyos, alterná arquear y redondear la espalda. Movilidad segura para la columna.",
    []]
 ];
+
+/**
+ * Ejercicios de IMPACTO: hay una fase de vuelo, o el pie golpea el piso
+ * repetidamente.
+ *
+ * Siete de las once condiciones exigen evitarlos. Antes esto se decidía
+ * con una expresión regular sobre el nombre del ejercicio, dentro del
+ * bloque de cardio, y fallaba de dos formas: "Escalador" no contiene
+ * ninguna de las palabras buscadas, y los ejercicios de impacto que no
+ * están en el grupo `cardio` ni siquiera pasaban por ese bloque.
+ *
+ * Una propiedad del ejercicio no se escapa por el nombre.
+ */
+const DE_IMPACTO = new Set([
+    "Cuerda para saltar",
+    "Burpees",
+    "Escalador (mountain climbers)"
+]);
+
+/**
+ * Ejercicios que se hacen ACOSTADO BOCA ARRIBA.
+ *
+ * A partir del segundo trimestre el decúbito supino sostenido comprime
+ * la vena cava. El aviso de embarazo ya afirmaba que se quitaban, así
+ * que el sistema decía una cosa y hacía otra.
+ */
+const EN_SUPINO = new Set([
+    "Press de banca con barra",
+    "Press de banca con mancuernas",
+    "Aperturas con mancuernas",
+    "Press francés con mancuernas",
+    "Pull-over con mancuerna",
+    "Puente de glúteos",
+    "Dead bug",
+    "Curl femoral acostado",
+    "Hip thrust con barra"
+]);
 
 /**
  * Ejercicios que se miden en SEGUNDOS, no en repeticiones.
@@ -358,4 +418,7 @@ function enlaceVideo(termino) {
     return "https://www.youtube.com/results?search_query=" + encodeURIComponent(termino);
 }
 
-module.exports = { EJERCICIOS, enlaceVideo, medidaDe, POR_TIEMPO, POR_MINUTOS };
+module.exports = {
+    EJERCICIOS, enlaceVideo, medidaDe,
+    POR_TIEMPO, POR_MINUTOS, DE_IMPACTO, EN_SUPINO
+};

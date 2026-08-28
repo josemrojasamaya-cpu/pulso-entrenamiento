@@ -168,6 +168,17 @@ ALTER TABLE ejercicios
     ADD COLUMN IF NOT EXISTS medida VARCHAR(15) NOT NULL DEFAULT 'repeticiones';
         -- repeticiones | segundos | minutos
 
+-- Impacto: hay fase de vuelo o el pie golpea el piso repetidamente.
+-- Siete de las once condiciones lo prohíben. Es una propiedad del
+-- ejercicio, no algo que se pueda deducir de su nombre.
+ALTER TABLE ejercicios
+    ADD COLUMN IF NOT EXISTS impacto BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Se hace acostado boca arriba. A partir del segundo trimestre el
+-- decúbito supino sostenido comprime la vena cava.
+ALTER TABLE ejercicios
+    ADD COLUMN IF NOT EXISTS supino BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE INDEX IF NOT EXISTS idx_ej_grupo  ON ejercicios (grupo);
 CREATE INDEX IF NOT EXISTS idx_ej_equipo ON ejercicios (equipo);
 
@@ -212,6 +223,14 @@ CREATE TABLE IF NOT EXISTS rutina_ejercicios (
     descanso_seg     INTEGER NOT NULL DEFAULT 90,
     nota             TEXT
 );
+
+-- La unidad se guarda POR RUTINA y no se toma del catálogo al leer.
+-- El mismo ejercicio puede prescribirse de dos formas -el escalador se
+-- puede pedir por repeticiones o por minutos de trabajo continuo- y la
+-- que vale es la que se decidió al armar la sesión. Sin esta columna, el
+-- motor asignaba una unidad y la lectura la descartaba.
+ALTER TABLE rutina_ejercicios
+    ADD COLUMN IF NOT EXISTS medida VARCHAR(15) NOT NULL DEFAULT 'repeticiones';
 
 CREATE INDEX IF NOT EXISTS idx_re_rutina ON rutina_ejercicios (rutina_id, orden);
 

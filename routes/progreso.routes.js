@@ -35,12 +35,25 @@ router.get("/:id/resumen", exigirAccesoAtleta, async (req, res) => {
                   WHERE m.usuario_id = $1 AND m.mejor_1rm > 0
                   ORDER BY m.mejor_1rm DESC LIMIT 12`, [id]),
 
+            /**
+             * Constancia: días entrenados contra días planeados.
+             *
+             * Antes se medía contando rutinas marcadas como completadas,
+             * y eso daba 0% a quien venía entrenando desde hace meses:
+             * las sesiones quedaban registradas como series, pero sin una
+             * rutina generada que marcar. La pregunta real es "¿apareciste
+             * las veces que dijiste que ibas a aparecer?", y eso se
+             * responde con los días en que efectivamente hubo trabajo.
+             */
             pool.query(
-                `SELECT COUNT(*) FILTER (WHERE estado = 'completada')::int completadas,
-                        COUNT(*) FILTER (WHERE estado = 'omitida')::int    omitidas,
-                        COUNT(*)::int total
-                   FROM rutinas
-                  WHERE usuario_id = $1 AND fecha > CURRENT_DATE - 30`, [id]),
+                `SELECT
+                    (SELECT COUNT(DISTINCT date_trunc('day', realizada_en))::int
+                       FROM series
+                      WHERE usuario_id = $1 AND realizada_en > NOW() - INTERVAL '30 days') dias_entrenados,
+                    COALESCE((SELECT dias_por_semana FROM perfiles WHERE usuario_id = $1), 3) dias_plan,
+                    (SELECT COUNT(*) FILTER (WHERE estado = 'completada')::int
+                       FROM rutinas WHERE usuario_id = $1 AND fecha > CURRENT_DATE - 30) rutinas_completadas
+                `, [id]),
 
             pool.query("SELECT COALESCE(SUM(puntos),0)::int total FROM puntos WHERE usuario_id = $1", [id]),
 
@@ -53,7 +66,13 @@ router.get("/:id/resumen", exigirAccesoAtleta, async (req, res) => {
         ]);
 
         const peso = ultimaMedicion.rows[0] ? Number(ultimaMedicion.rows[0].peso_kg) : 70;
+
         const a = adherencia.rows[0];
+        // 30 días son algo más de cuatro semanas.
+        const esperados = Math.round(a.dias_plan * (30 / 7));
+        const porcentaje = esperados > 0
+            ? Math.min(100, Math.round((a.dias_entrenados / esperados) * 100))
+            : null;
 
         res.json({
             volumen_semanal: semanas.rows.map(s => ({
@@ -64,8 +83,10 @@ router.get("/:id/resumen", exigirAccesoAtleta, async (req, res) => {
             })),
             marcas: marcas.rows,
             adherencia: {
-                ...a,
-                porcentaje: a.total > 0 ? Math.round((a.completadas / a.total) * 100) : null
+                dias_entrenados: a.dias_entrenados,
+                dias_esperados: esperados,
+                rutinas_completadas: a.rutinas_completadas,
+                porcentaje
             },
             nivel: nivelDe(pts.rows[0].total),
             totales: {

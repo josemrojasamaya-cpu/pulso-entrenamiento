@@ -91,6 +91,9 @@ function pintar(r) {
       <div class="metrica">
         <b>${r.adherencia.porcentaje !== null ? r.adherencia.porcentaje + "%" : "—"}</b>
         <span>Constancia (30 días)</span>
+        <div class="delta ${r.adherencia.porcentaje >= 80 ? "sube" : r.adherencia.porcentaje >= 50 ? "igual" : "baja"}">
+          ${r.adherencia.dias_entrenados} de ${r.adherencia.dias_esperados} días
+        </div>
       </div>
       <div class="metrica">
         <b>${r.totales.calorias_estimadas.toLocaleString("es")}</b>

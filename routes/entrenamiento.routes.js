@@ -3,12 +3,28 @@ const pool = require("../config/db");
 const { requiereSesion, puedeVerAtleta } = require("../middleware/auth");
 const { generar } = require("../lib/motor-rutinas");
 const { estimar1RM } = require("../lib/progresion");
+const { restricciones, esApto } = require("../lib/salud");
 const { enlaceVideo } = require("../db/ejercicios");
 
 const router = express.Router();
 router.use(requiereSesion);
 
 /* ── Utilidades ───────────────────────────────────────────────────── */
+
+/**
+ * Una fecha con forma correcta puede seguir sin existir: 2026-13-45
+ * pasa la expresión regular y revienta la consulta. Se comprueba que el
+ * calendario la acepte y que caiga en un rango con sentido.
+ */
+function fechaValida(texto) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return false;
+    const d = new Date(texto + "T00:00:00Z");
+    if (isNaN(d.getTime())) return false;
+    if (d.toISOString().slice(0, 10) !== texto) return false;   // 2026-02-31
+
+    const anio = d.getUTCFullYear();
+    return anio >= 2020 && anio <= 2100;
+}
 
 function hoyISO(desplazamientoDias = 0) {
     const d = new Date();
@@ -27,7 +43,7 @@ function hoyISO(desplazamientoDias = 0) {
 async function reunirContexto(usuarioId) {
     const [perfil, condiciones, catalogo, recientes, sesiones] = await Promise.all([
         pool.query("SELECT * FROM perfiles WHERE usuario_id = $1", [usuarioId]),
-        pool.query("SELECT codigo FROM condiciones WHERE usuario_id = $1 AND activa", [usuarioId]),
+        pool.query("SELECT codigo, severidad FROM condiciones WHERE usuario_id = $1 AND activa", [usuarioId]),
         pool.query("SELECT * FROM ejercicios WHERE activo ORDER BY id"),
         // Ejercicios hechos en las últimas 72 horas: se evitan para que
         // la rutina de hoy no repita la de anteayer.
@@ -61,7 +77,12 @@ async function reunirContexto(usuarioId) {
 
     return {
         perfil: perfil.rows[0] || null,
+        // Dos formas del mismo dato: `condiciones` son los códigos, que es
+        // lo que compara esApto contra contraindicado_en; `severidades`
+        // lleva además cuán grave es cada una, que es lo que escala los
+        // límites.
         condiciones: condiciones.rows.map(c => c.codigo),
+        severidades: condiciones.rows,
         catalogo: catalogo.rows,
         historial,
         ejerciciosRecientes: recientes.rows.map(r => r.ejercicio_id),
@@ -97,10 +118,11 @@ async function persistir(usuarioId, fecha, plan) {
             await cliente.query(
                 `INSERT INTO rutina_ejercicios
                    (rutina_id, ejercicio_id, orden, series, rep_min, rep_max,
-                    peso_sugerido_kg, descanso_seg, nota)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+                    peso_sugerido_kg, descanso_seg, nota, medida)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
                 [rutinaId, e.ejercicio.id, orden++, e.series, e.rep_min, e.rep_max,
-                 e.peso_sugerido_kg, e.descanso_seg, e.nota]
+                 e.peso_sugerido_kg, e.descanso_seg, e.nota,
+                 e.medida || e.ejercicio.medida || "repeticiones"]
             );
         }
 
@@ -114,6 +136,52 @@ async function persistir(usuarioId, fecha, plan) {
     }
 }
 
+/**
+ * ¿La rutina guardada sigue siendo segura para esta persona?
+ *
+ * Las rutinas se generan hasta con siete días de anticipación y quedan
+ * guardadas. Si alguien declara un embarazo o una hernia después de esa
+ * generación, las rutinas ya escritas seguían sirviéndose tal cual: la
+ * persona recibía sentadilla con barra y peso muerto el día siguiente a
+ * haber declarado su condición.
+ *
+ * Committear la condición no basta: hay que revisar lo ya escrito.
+ */
+async function revalidar(usuarioId, rutina) {
+    const cond = await pool.query(
+        "SELECT codigo, severidad FROM condiciones WHERE usuario_id = $1 AND activa", [usuarioId]
+    );
+    const codigos = cond.rows.map(c => c.codigo);
+    const limites = restricciones(cond.rows);
+
+    const inapto = rutina.ejercicios.filter(e => !esApto(e, codigos, limites).apto);
+
+    // No alcanza con revisar QUÉ ejercicios tiene: hay que revisar CON QUÉ
+    // PARÁMETROS. Si alguien pasa de una condición leve a una severa, los
+    // ejercicios pueden seguir siendo aptos y aun así el descanso guardado
+    // quedar por debajo del mínimo que ahora le corresponde.
+    const descansoCorto = rutina.ejercicios.filter(
+        e => e.descanso_seg > 0 && e.descanso_seg < limites.descansoMin
+    );
+
+    // El rango de repeticiones también se corre hacia arriba con las
+    // condiciones: menos carga por repetición. Una rutina guardada antes
+    // de declararlas conserva el rango viejo.
+    const repsBajas = rutina.ejercicios.filter(
+        e => e.medida === "repeticiones" && e.rep_min < limites.repMin
+    );
+
+    return {
+        valida: inapto.length === 0 && descansoCorto.length === 0 && repsBajas.length === 0,
+        inapto, descansoCorto, repsBajas, codigos, limites
+    };
+}
+
+/** Borra una rutina para que se vuelva a generar con los datos de hoy. */
+async function descartarRutina(rutinaId) {
+    await pool.query("DELETE FROM rutinas WHERE id = $1", [rutinaId]);
+}
+
 /** Lee una rutina ya guardada, con sus ejercicios y lo ya registrado. */
 async function leerRutina(usuarioId, fecha) {
     const r = await pool.query(
@@ -124,8 +192,15 @@ async function leerRutina(usuarioId, fecha) {
     const rutina = r.rows[0];
 
     const ej = await pool.query(
+        // Se traen también contraindicado_en, impacto y supino: son los
+        // campos con los que `revalidar` comprueba que una rutina guardada
+        // hace días sigue siendo segura hoy.
+        // `re.*` trae la medida decidida al armar la sesión. No se
+        // selecciona e.medida: pisaría a la de la rutina, que es la que
+        // vale.
         `SELECT re.*, e.nombre, e.grupo, e.patron, e.equipo, e.unilateral,
-                e.instrucciones, e.video_url, e.nivel, e.medida
+                e.instrucciones, e.video_url, e.nivel,
+                e.contraindicado_en, e.impacto, e.supino, e.exigencia
            FROM rutina_ejercicios re
            JOIN ejercicios e ON e.id = re.ejercicio_id
           WHERE re.rutina_id = $1 ORDER BY re.orden`,
@@ -166,7 +241,12 @@ async function leerRutina(usuarioId, fecha) {
  * con paredes de concreto.
  */
 router.get("/dia/:fecha", async (req, res) => {
-    const fecha = /^\d{4}-\d{2}-\d{2}$/.test(req.params.fecha) ? req.params.fecha : hoyISO();
+    if (!fechaValida(req.params.fecha)) {
+        return res.status(400).json({
+            message: "Fecha inválida. Se espera el formato AAAA-MM-DD dentro de un rango razonable."
+        });
+    }
+    const fecha = req.params.fecha;
     const usuarioId = Number(req.query.atleta_id) || req.usuario.id;
 
     if (!(await puedeVerAtleta(req.usuario, usuarioId))) {
@@ -182,24 +262,79 @@ router.get("/dia/:fecha", async (req, res) => {
             message: "Sólo se puede preparar la rutina de los próximos siete días."
         });
     }
+    // Hacia atrás se consultan rutinas ya vividas, pero no se generan:
+    // pedir el 31 de diciembre de 1999 creaba una fila con esa fecha.
+    if (diasAdelante < -365) {
+        return res.status(400).json({ message: "Esa fecha queda fuera del historial." });
+    }
 
     try {
         let rutina = await leerRutina(usuarioId, fecha);
+        let regenerada = false;
+
         if (rutina) {
-            // Los avisos de seguridad se recalculan y se devuelven SIEMPRE,
-            // no sólo al generar la rutina. Antes desaparecían a partir de
-            // la segunda vez que se abría la aplicación en el día: quien
-            // tiene hipertensión dejaba de ver justo la advertencia sobre
-            // no contener la respiración.
-            const cond = await pool.query(
-                "SELECT codigo FROM condiciones WHERE usuario_id = $1 AND activa", [usuarioId]
-            );
-            const { restricciones } = require("../lib/salud");
-            return res.json({
-                rutina,
-                generada: false,
-                avisos: restricciones(cond.rows.map(c => c.codigo)).avisos
-            });
+            const control = await revalidar(usuarioId, rutina);
+
+            if (control.valida) {
+                // Los avisos de seguridad se recalculan y se devuelven
+                // SIEMPRE, no sólo al generar. Antes desaparecían a partir
+                // de la segunda vez que se abría la aplicación en el día:
+                // quien tiene hipertensión dejaba de ver justo la
+                // advertencia sobre no contener la respiración.
+                return res.json({
+                    rutina, generada: false,
+                    avisos: control.limites.avisos
+                });
+            }
+
+            // Quedó desactualizada respecto de las condiciones actuales.
+            // Si ya se registraron series contra ella no se puede borrar
+            // sin perder el entrenamiento; en ese caso se avisa y se
+            // marcan los ejercicios afectados.
+            const yaEntrenada = rutina.ejercicios.some(e => (e.realizadas || []).length > 0);
+
+            // Con la sesión ya empezada no se puede rehacer sin perder lo
+            // registrado. Si sólo hay que alargar descansos, se corrige en
+            // el lugar; si hay ejercicios inseguros, se avisa.
+            if (yaEntrenada && control.inapto.length === 0) {
+                await pool.query(
+                    `UPDATE rutina_ejercicios SET descanso_seg = $1
+                      WHERE rutina_id = $2 AND descanso_seg > 0 AND descanso_seg < $1`,
+                    [control.limites.descansoMin, rutina.id]
+                );
+                await pool.query(
+                    `UPDATE rutina_ejercicios re SET rep_min = $1,
+                            rep_max = GREATEST(re.rep_max, $2)
+                       FROM ejercicios e
+                      WHERE e.id = re.ejercicio_id AND re.rutina_id = $3
+                        AND e.medida = 'repeticiones' AND re.rep_min < $1`,
+                    [control.limites.repMin, control.limites.repMax, rutina.id]
+                );
+                rutina = await leerRutina(usuarioId, fecha);
+                return res.json({
+                    rutina, generada: false,
+                    avisos: control.limites.avisos,
+                    ajustada: true,
+                    mensaje: "Se alargaron los descansos para respetar tus condiciones actuales."
+                });
+            }
+
+            if (yaEntrenada) {
+                return res.json({
+                    rutina, generada: false,
+                    avisos: control.limites.avisos,
+                    desactualizada: true,
+                    inseguros: control.inapto.map(e => ({
+                        id: e.id, nombre: e.nombre,
+                        motivo: esApto(e, control.codigos, control.limites).motivo
+                    })),
+                    mensaje: "Esta sesión se armó antes de que registraras tus condiciones actuales. " +
+                             "Los ejercicios marcados ya no son recomendables para vos: salteálos."
+                });
+            }
+
+            await descartarRutina(rutina.id);
+            regenerada = true;
         }
 
         const ctx = await reunirContexto(usuarioId);
@@ -213,6 +348,7 @@ router.get("/dia/:fecha", async (req, res) => {
         const plan = generar({
             perfil: ctx.perfil,
             condiciones: ctx.condiciones,
+            severidades: ctx.severidades,
             catalogo: ctx.catalogo,
             fecha,
             usuarioId,
@@ -226,7 +362,15 @@ router.get("/dia/:fecha", async (req, res) => {
         await persistir(usuarioId, fecha, plan);
         rutina = await leerRutina(usuarioId, fecha);
 
-        res.json({ rutina, generada: true, avisos: plan.avisos });
+        res.json({
+            rutina,
+            generada: true,
+            regenerada,
+            avisos: plan.avisos,
+            ...(regenerada ? {
+                mensaje: "Tu rutina se volvió a armar porque cambiaron tus condiciones de salud."
+            } : {})
+        });
     } catch (err) {
         console.error("[RUTINA]", err.message);
         res.status(500).json({ message: "No se pudo preparar la rutina." });
@@ -256,7 +400,8 @@ router.get("/paquete", async (req, res) => {
             let r = await leerRutina(usuarioId, fecha);
             if (!r) {
                 const plan = generar({
-                    perfil: ctx.perfil, condiciones: ctx.condiciones, catalogo: ctx.catalogo,
+                    perfil: ctx.perfil, condiciones: ctx.condiciones,
+                    severidades: ctx.severidades, catalogo: ctx.catalogo,
                     fecha, usuarioId, historial: ctx.historial,
                     sesionIndice: ctx.sesionIndice + i,
                     ejerciciosRecientes: ctx.ejerciciosRecientes
@@ -268,11 +413,10 @@ router.get("/paquete", async (req, res) => {
             if (r) rutinas.push(r);
         }
 
-        const { restricciones } = require("../lib/salud");
         res.json({
             generado_en: new Date().toISOString(),
             usuario: { id: usuarioId, nombre: req.usuario.nombre },
-            avisos: restricciones(ctx.condiciones).avisos,
+            avisos: restricciones(ctx.severidades).avisos,
             rutinas
         });
     } catch (err) {
@@ -306,45 +450,128 @@ router.post("/series", async (req, res) => {
     const guardadas = [];
     const rechazadas = [];
 
+    /**
+     * Valida una serie por completo antes de tocar la base.
+     *
+     * Antes sólo se comprobaban cuatro campos, y `id_local`, `serie_num`
+     * y `realizada_en` llegaban sin revisar al INSERT. Un solo valor malo
+     * reventaba la transacción entera y se perdían las series buenas del
+     * mismo envío — justo en la ruta que existe para recibir el
+     * entrenamiento que alguien hizo sin señal. Peor todavía: como
+     * respondía 500, el teléfono reintentaba el mismo lote envenenado
+     * para siempre.
+     */
+    function validar(s) {
+        const ejercicioId = Number(s.ejercicio_id);
+        if (!Number.isInteger(ejercicioId) || ejercicioId <= 0) return "ejercicio inválido";
+
+        const peso = s.peso_kg === null || s.peso_kg === undefined ? 0 : Number(s.peso_kg);
+        if (!Number.isFinite(peso) || peso < 0 || peso > 600) return "peso fuera de rango";
+
+        // El techo de repeticiones depende de si hay carga. Sin peso, 150
+        // repeticiones o 150 segundos de plancha son creíbles. CON carga,
+        // pasar de 50 es casi siempre un cero de más al teclear, y ese
+        // número distorsiona el peso sugerido de las sesiones siguientes.
+        const reps = Number(s.repeticiones);
+        const techo = peso > 0 ? 50 : 200;
+        if (!Number.isInteger(reps) || reps < 1 || reps > techo) {
+            return peso > 0
+                ? `repeticiones fuera de rango (con ${peso} kg el máximo aceptado es ${techo})`
+                : "repeticiones fuera de rango";
+        }
+
+        const rpe = s.rpe === null || s.rpe === undefined || s.rpe === "" ? null : Number(s.rpe);
+        if (rpe !== null && (!Number.isFinite(rpe) || rpe < 1 || rpe > 10)) {
+            return "esfuerzo fuera de la escala de 1 a 10";
+        }
+
+        const num = Number(s.serie_num);
+        if (s.serie_num !== undefined && (!Number.isInteger(num) || num < 1 || num > 50)) {
+            return "número de serie inválido";
+        }
+
+        // La columna es VARCHAR(60): un identificador más largo tira la
+        // transacción en vez de rechazar sólo esta fila.
+        if (s.id_local !== undefined && s.id_local !== null) {
+            if (typeof s.id_local !== "string" || s.id_local.length > 60) {
+                return "identificador local inválido";
+            }
+        }
+
+        if (s.realizada_en) {
+            const f = new Date(s.realizada_en);
+            if (isNaN(f.getTime())) return "fecha inválida";
+            // Una fecha futura no puede ser un entrenamiento hecho.
+            if (f.getTime() > Date.now() + 86400000) return "fecha en el futuro";
+        }
+
+        const re = s.rutina_ejercicio_id;
+        if (re !== undefined && re !== null && !Number.isInteger(Number(re))) {
+            return "referencia de rutina inválida";
+        }
+
+        return null;
+    }
+
+    // Se filtra ANTES de abrir la transacción, y cada serie se inserta en
+    // su propia subtransacción: un fallo inesperado descarta esa fila y
+    // no las demás.
+    const validas = [];
+    for (const s of lote) {
+        const error = validar(s);
+        if (error) rechazadas.push({ id_local: s.id_local || null, motivo: error });
+        else validas.push(s);
+    }
+
+    // Sólo se aceptan referencias a rutinas propias: colgar una serie de
+    // la rutina de otra persona no expone nada, pero ensucia sus datos.
+    const refs = [...new Set(validas.map(s => s.rutina_ejercicio_id).filter(Number.isInteger))];
+    let propias = new Set();
+    if (refs.length) {
+        const r = await pool.query(
+            `SELECT re.id FROM rutina_ejercicios re
+               JOIN rutinas ru ON ru.id = re.rutina_id
+              WHERE re.id = ANY($1::int[]) AND ru.usuario_id = $2`,
+            [refs, usuarioId]
+        );
+        propias = new Set(r.rows.map(x => x.id));
+    }
+
     const cliente = await pool.connect();
     try {
         await cliente.query("BEGIN");
 
-        for (const s of lote) {
-            const ejercicioId = Number(s.ejercicio_id);
-            const reps = Number(s.repeticiones);
-            const peso = s.peso_kg === null || s.peso_kg === undefined ? 0 : Number(s.peso_kg);
-            const rpe  = s.rpe === null || s.rpe === undefined || s.rpe === "" ? null : Number(s.rpe);
+        for (const s of validas) {
+            const ref = Number.isInteger(s.rutina_ejercicio_id) && propias.has(s.rutina_ejercicio_id)
+                ? s.rutina_ejercicio_id : null;
 
-            if (!Number.isInteger(ejercicioId) || !Number.isInteger(reps) || reps < 1 || reps > 500) {
-                rechazadas.push({ id_local: s.id_local || null, motivo: "ejercicio o repeticiones inválidos" });
-                continue;
-            }
-            if (!Number.isFinite(peso) || peso < 0 || peso > 1000) {
-                rechazadas.push({ id_local: s.id_local || null, motivo: "peso fuera de rango" });
-                continue;
-            }
-            if (rpe !== null && (!Number.isFinite(rpe) || rpe < 1 || rpe > 10)) {
-                rechazadas.push({ id_local: s.id_local || null, motivo: "esfuerzo fuera de la escala de 1 a 10" });
-                continue;
-            }
+            try {
+                await cliente.query("SAVEPOINT una_serie");
+                const r = await cliente.query(
+                    `INSERT INTO series
+                       (id_local, usuario_id, rutina_ejercicio_id, ejercicio_id,
+                        serie_num, repeticiones, peso_kg, rpe, realizada_en)
+                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8, COALESCE($9::timestamptz, NOW()))
+                     ON CONFLICT (usuario_id, id_local) DO NOTHING
+                     RETURNING id`,
+                    [s.id_local || null, usuarioId, ref, Number(s.ejercicio_id),
+                     Number(s.serie_num) || 1, Number(s.repeticiones),
+                     s.peso_kg === null || s.peso_kg === undefined ? 0 : Number(s.peso_kg),
+                     s.rpe === null || s.rpe === undefined || s.rpe === "" ? null : Number(s.rpe),
+                     s.realizada_en || null]
+                );
+                await cliente.query("RELEASE SAVEPOINT una_serie");
 
-            const r = await cliente.query(
-                `INSERT INTO series
-                   (id_local, usuario_id, rutina_ejercicio_id, ejercicio_id,
-                    serie_num, repeticiones, peso_kg, rpe, realizada_en)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8, COALESCE($9::timestamptz, NOW()))
-                 ON CONFLICT (usuario_id, id_local) DO NOTHING
-                 RETURNING id`,
-                [s.id_local || null, usuarioId, s.rutina_ejercicio_id || null, ejercicioId,
-                 Number(s.serie_num) || 1, reps, peso, rpe, s.realizada_en || null]
-            );
-
-            guardadas.push({
-                id_local: s.id_local || null,
-                id: r.rowCount ? r.rows[0].id : null,
-                duplicada: r.rowCount === 0
-            });
+                guardadas.push({
+                    id_local: s.id_local || null,
+                    id: r.rowCount ? r.rows[0].id : null,
+                    duplicada: r.rowCount === 0
+                });
+            } catch (err) {
+                await cliente.query("ROLLBACK TO SAVEPOINT una_serie");
+                rechazadas.push({ id_local: s.id_local || null, motivo: "no se pudo guardar" });
+                console.error("[SERIES] fila descartada:", err.message);
+            }
         }
 
         await cliente.query("COMMIT");
