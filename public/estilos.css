@@ -33,9 +33,31 @@
 
 *{margin:0;padding:0;box-sizing:border-box}
 html{-webkit-text-size-adjust:100%; background:var(--bg)}
+
+/*
+  El fondo acompaña toda la aplicación, no sólo la portada, y NO se
+  desplaza con el contenido: al bajar, la figura sigue ahí.
+
+  Va en una capa propia con `position:fixed` en vez de
+  `background-attachment:fixed`, porque en móviles esa propiedad se
+  ignora o produce saltos al aparecer y desaparecer la barra del
+  navegador. Una capa fija se comporta igual en todos lados.
+*/
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background:url('/fondo.svg?v=3') center center/cover no-repeat;
+  pointer-events:none;
+}
+/* Velo: el fondo tiene que acompañar, no competir con el contenido. */
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:linear-gradient(180deg,
+    rgba(6,10,16,.82) 0%, rgba(6,10,16,.88) 45%, rgba(6,10,16,.94) 100%);
+}
+
 body{
   font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  background:var(--bg); color:var(--tx);
+  background:transparent; color:var(--tx);
   font-size:15px; line-height:1.55;
   -webkit-font-smoothing:antialiased;
   padding-bottom:76px;          /* barra inferior en el celular */
@@ -44,8 +66,9 @@ body{
 
 /* ── Encabezado ───────────────────────────────────────────────────── */
 .top{
-  background:var(--gr-850); border-bottom:1px solid var(--borde);
+  background:rgba(19,25,32,.9); border-bottom:1px solid var(--borde);
   position:sticky; top:0; z-index:40;
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
 }
 .top-in{
   max-width:1080px; margin:0 auto; padding:0 18px;
@@ -76,9 +99,12 @@ body{
 .titulo h1{font-size:24px; font-weight:700; letter-spacing:-.5px; line-height:1.2}
 .titulo p{color:var(--tx2); font-size:14px; margin-top:3px}
 
+/* Las superficies dejan pasar algo del fondo: si fueran opacas, el
+   fondo sólo se vería en los márgenes y no valdría la pena tenerlo. */
 .tarjeta{
-  background:var(--sup); border:1px solid var(--borde);
+  background:rgba(24,31,40,.86); border:1px solid var(--borde);
   border-radius:var(--radio); box-shadow:var(--sombra);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
 }
 .t-cab{
   padding:14px 17px; border-bottom:1px solid var(--borde);
@@ -204,7 +230,8 @@ tr.clic:hover td{background:var(--gr-750)}
 /* ── Barra inferior (celular) ─────────────────────────────────────── */
 .tabs{
   position:fixed; left:0; right:0; bottom:0; z-index:50;
-  background:var(--gr-850); border-top:1px solid var(--borde);
+  background:rgba(19,25,32,.94); border-top:1px solid var(--borde);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   display:flex; padding:6px 4px calc(6px + env(safe-area-inset-bottom));
 }
 .tabs a{
