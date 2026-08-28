@@ -156,10 +156,10 @@ catálogo y los datos de ejemplo solo. En planes sin acceso a consola es la
 
 ```bash
 node pruebas/motor.js                                    # 62, sin base de datos
-URL_BASE=http://localhost:3000 node pruebas/api.js       # 17, contra el servidor vivo
+URL_BASE=http://localhost:3000 node pruebas/api.js       # 25, contra el servidor vivo
 ```
 
-**79 comprobaciones**, y la historia de por qué son dos suites vale más que
+**87 comprobaciones**, y la historia de por qué son dos suites vale más que
 el número.
 
 `motor.js` prueba el generador en memoria: seguridad clínica,
@@ -186,10 +186,32 @@ repeticiones y el veredicto de `esApto`. Esa invariante encontró un defecto
 más que la auditoría no había visto: el motor asignaba una unidad al
 ejercicio y la persistencia la descartaba.
 
-La lección, que vale para cualquier sistema: **una prueba escrita contra la
-misma tabla que usa el código no prueba nada.** La que sirve es la que
-afirma una propiedad del sistema entero y la evalúa sobre lo que el usuario
-realmente recibe.
+Una segunda auditoría, esta vez sobre el frontend y la capa sin conexión,
+encontró seis vías más por las que un entrenamiento se perdía o se
+duplicaba. La raíz de varias era de una línea: `const Almacen` en el ámbito
+superior de un script clásico **no crea una propiedad en `window`**, así
+que cada `if (window.Almacen)` del resto de la aplicación era falso en
+silencio — el cierre de sesión no limpiaba nada y el contador de series
+pendientes marcaba siempre cero, ocultando todo lo demás.
+
+Y hay un defecto que **ninguna de las dos auditorías vio**: el botón
+"Terminar sesión" nunca funcionó. La consulta usaba el mismo parámetro en
+tres contextos y PostgreSQL la rechazaba entera con un 500. Las dos
+auditorías probaron esa ruta con la red caída, y ninguna suite recorría el
+ciclo completo de una sesión. Ahora hay ocho comprobaciones que sí lo
+recorren.
+
+Tres lecciones, que valen para cualquier sistema:
+
+- **Una prueba escrita contra la misma tabla que usa el código no prueba
+  nada.** La que sirve afirma una propiedad del sistema entero y la evalúa
+  sobre lo que el usuario realmente recibe.
+- **Auditar por capas deja huecos entre ellas.** El fallo que sobrevivió
+  estaba justo en la juntura: en el camino feliz de una ruta que las dos
+  auditorías sólo ejercitaron con la red caída.
+- **Un `catch` vacío es donde van a morir los defectos.** Casi todos los
+  fallos de pérdida de datos de acá terminaban en un `.catch(() => {})`
+  puesto para que la interfaz no se rompiera.
 
 ## Sobre los videos
 
