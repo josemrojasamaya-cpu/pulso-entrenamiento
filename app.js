@@ -65,6 +65,11 @@ app.use("/api", require("./routes/auth.routes"));
 app.use("/api/atleta", require("./routes/perfil.routes"));
 app.use("/api/entrenamiento", require("./routes/entrenamiento.routes"));
 app.use("/api/progreso", require("./routes/progreso.routes"));
+app.use("/api/grupos", require("./routes/grupos.routes"));
+app.use("/api/retos", require("./routes/retos.routes"));
+
+/** Catálogo de planes. Público: se muestra antes de tener cuenta. */
+app.get("/api/planes", (req, res) => res.json(require("./lib/planes").catalogo()));
 
 app.use("/api", (req, res) => res.status(404).json({ message: "Recurso no encontrado." }));
 

@@ -400,3 +400,75 @@ CREATE INDEX IF NOT EXISTS idx_meso_usuario ON mesociclos (usuario_id, activo);
 -- nada, y el motor tendría que elegir uno arbitrariamente.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_meso_unico_activo
     ON mesociclos (usuario_id) WHERE activo;
+
+
+-- ---------------------------------------------------------------------
+--  Grupos
+--
+--  Dos formas de uso con la misma estructura: un grupo de amigos que se
+--  arman entre ellos, y el grupo que un profesor arma con sus alumnos.
+--  Lo que cambia es quién lo creó y qué rol tiene cada quien, no las
+--  tablas.
+--
+--  El código es corto y sin caracteres que se confundan al dictarlo:
+--  sirve para el enlace, para el QR y para decirlo en voz alta.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS grupos (
+    id            SERIAL PRIMARY KEY,
+    nombre        VARCHAR(80)  NOT NULL,
+    descripcion   VARCHAR(200),
+    creador_id    INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    codigo        VARCHAR(10)  NOT NULL UNIQUE,
+    tipo          VARCHAR(20)  NOT NULL DEFAULT 'amigos',   -- amigos | equipo
+    max_miembros  INTEGER      NOT NULL DEFAULT 3,
+    activo        BOOLEAN      NOT NULL DEFAULT TRUE,
+    creado_en     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_grupo_creador ON grupos (creador_id);
+
+CREATE TABLE IF NOT EXISTS grupo_miembros (
+    grupo_id    INTEGER NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    rol         VARCHAR(20) NOT NULL DEFAULT 'miembro',   -- dueño | miembro
+    unido_en    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (grupo_id, usuario_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_miembro_usuario ON grupo_miembros (usuario_id);
+
+
+-- ---------------------------------------------------------------------
+--  Retos
+--
+--  Se miden con lo que el sistema YA registra: sesiones, días activos,
+--  volumen movido, constancia. Nada que dependa de que alguien declare
+--  a mano cuánto hizo, porque eso invita a inflarlo y arruina la
+--  competencia para todos.
+--
+--  `meta` es opcional: sin meta gana quien más acumule; con meta, gana
+--  quien la alcance primero.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS retos (
+    id          SERIAL PRIMARY KEY,
+    grupo_id    INTEGER REFERENCES grupos(id) ON DELETE CASCADE,
+    creador_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    titulo      VARCHAR(120) NOT NULL,
+    tipo        VARCHAR(30)  NOT NULL,
+        -- sesiones | dias_activos | volumen | constancia | mediciones | pasos
+    meta        NUMERIC(12,2),
+    inicio      DATE NOT NULL DEFAULT CURRENT_DATE,
+    fin         DATE NOT NULL,
+    estado      VARCHAR(20) NOT NULL DEFAULT 'activo',   -- activo | cerrado
+    creado_en   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT reto_fechas_coherentes CHECK (fin >= inicio)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reto_grupo ON retos (grupo_id, estado);
+
+CREATE TABLE IF NOT EXISTS reto_participantes (
+    reto_id     INTEGER NOT NULL REFERENCES retos(id) ON DELETE CASCADE,
+    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    unido_en    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (reto_id, usuario_id)
+);

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1620">
+<title>Pulso · Grupos</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+.grupo-tarjeta{
+  background:rgba(24,31,40,.86); border:1px solid var(--borde);
+  border-radius:var(--radio); padding:16px 17px; margin-bottom:12px; cursor:pointer;
+  backdrop-filter:blur(10px); transition:.15s;
+}
+.grupo-tarjeta:hover{border-color:var(--az)}
+.grupo-cab{display:flex; align-items:center; gap:12px}
+.grupo-cab .ini{
+  width:42px; height:42px; border-radius:12px; flex:none; display:grid; place-items:center;
+  background:linear-gradient(150deg,var(--az),var(--az-3)); color:#fff; font-weight:750; font-size:15px;
+}
+.grupo-cab .tx{flex:1; min-width:0}
+.grupo-cab .tx b{display:block; font-size:16px; font-weight:650}
+.grupo-cab .tx span{font-size:12.5px; color:var(--tx2)}
+.codigo{
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:15px; font-weight:700;
+  letter-spacing:3px; color:var(--az); background:var(--az-tenue);
+  padding:5px 12px; border-radius:8px; border:1px solid var(--az-3);
+}
+
+.puesto{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--borde)}
+.puesto:last-child{border-bottom:none}
+.puesto.yo{background:var(--az-tenue); margin:0 -17px; padding-left:17px; padding-right:17px}
+.pos{
+  width:28px; height:28px; border-radius:9px; flex:none; display:grid; place-items:center;
+  background:var(--gr-750); font-size:12.5px; font-weight:750; color:var(--tx2);
+}
+.pos.oro{background:#3a2f14; color:#e0b64a}
+.pos.plata{background:#2b3138; color:#c3ced8}
+.pos.bronce{background:#33251a; color:#c98a54}
+
+.qr-caja{
+  background:#fff; border-radius:14px; padding:14px;
+  width:210px; margin:0 auto 14px; box-shadow:0 8px 30px rgba(0,0,0,.4);
+}
+.qr-caja svg{width:100%; height:auto; display:block}
+
+.compartir{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:12px}
+.btn-wa{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:12px; border-radius:10px; border:none; cursor:pointer;
+  background:#25d366; color:#062b14; font:inherit; font-size:14px; font-weight:700;
+  text-decoration:none;
+}
+.btn-wa:hover{filter:brightness(1.06)}
+.btn-wa svg{width:18px; height:18px; fill:currentColor}
+
+.reto{
+  background:var(--gr-850); border:1px solid var(--borde);
+  border-radius:11px; padding:14px 15px; margin-bottom:10px;
+}
+.reto-cab{display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap}
+.reto-cab b{font-size:14.5px; font-weight:650; flex:1; min-width:0}
+.barra-reto{height:6px; background:var(--gr-750); border-radius:4px; overflow:hidden; margin:5px 0 2px}
+.barra-reto div{height:100%; background:linear-gradient(90deg,var(--az),#5fa0ea); border-radius:4px}
+.fila-reto{display:flex; align-items:center; gap:10px; font-size:13px; padding:5px 0}
+.fila-reto .n{width:20px; color:var(--tx3); font-weight:700; font-size:12px}
+.fila-reto .q{flex:1}
+.fila-reto .v{font-weight:700; font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="pagina" id="vista">
+  <div class="cargando">Cargando…</div>
+</main>
+
+<nav class="tabs" id="tabs"></nav>
+
+<!-- Crear grupo -->
+<div class="telon" id="m-crear">
+  <div class="modal">
+    <div class="modal-cab"><h3>Crear un grupo</h3><button onclick="cerrarModal('m-crear')">&times;</button></div>
+    <div class="modal-cu">
+      <label class="campo"><span>Nombre</span>
+        <input id="g-nombre" placeholder="Los del barrio, Equipo de la tarde…" maxlength="80">
+      </label>
+      <label class="campo"><span>Descripción (opcional)</span>
+        <textarea id="g-desc" maxlength="200" placeholder="Cuándo entrenan, qué buscan…"></textarea>
+      </label>
+      <div class="aviso info">
+        Cuando lo crees te damos un código y un QR para que se sumen los demás.
+      </div>
+      <div id="g-msg"></div>
+    </div>
+    <div class="modal-pie">
+      <button class="btn sec" onclick="cerrarModal('m-crear')">Cancelar</button>
+      <button class="btn" onclick="crearGrupo()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unirse -->
+<div class="telon" id="m-unirme">
+  <div class="modal">
+    <div class="modal-cab"><h3>Entrar a un grupo</h3><button onclick="cerrarModal('m-unirme')">&times;</button></div>
+    <div class="modal-cu">
+      <label class="campo"><span>Código del grupo</span>
+        <input id="u-codigo" placeholder="ABC123" maxlength="10"
+               style="text-transform:uppercase; letter-spacing:4px; font-size:19px;
+                      text-align:center; font-weight:700"
+               oninput="mirarCodigo()">
+      </label>
+      <div id="u-vista"></div>
+      <div id="u-msg"></div>
+    </div>
+    <div class="modal-pie">
+      <button class="btn sec" onclick="cerrarModal('m-unirme')">Cancelar</button>
+      <button class="btn" onclick="unirme()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invitar -->
+<div class="telon" id="m-invitar">
+  <div class="modal">
+    <div class="modal-cab"><h3>Invitar al grupo</h3><button onclick="cerrarModal('m-invitar')">&times;</button></div>
+    <div class="modal-cu" id="inv-cuerpo"></div>
+    <div class="modal-pie">
+      <button class="btn sec" onclick="cerrarModal('m-invitar')" style="flex:1">Listo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Crear reto -->
+<div class="telon" id="m-reto">
+  <div class="modal">
+    <div class="modal-cab"><h3>Nuevo reto</h3><button onclick="cerrarModal('m-reto')">&times;</button></div>
+    <div class="modal-cu">
+      <label class="campo"><span>Título</span>
+        <input id="r-titulo" placeholder="Tres semanas sin fallar" maxlength="120">
+      </label>
+      <label class="campo"><span>Qué se mide</span>
+        <select id="r-tipo" onchange="pintarTipoReto()"></select>
+      </label>
+      <div id="r-desc" style="font-size:12.5px; color:var(--tx2); line-height:1.55; margin-bottom:14px"></div>
+      <div class="rejilla r-2">
+        <label class="campo"><span>Empieza</span><input type="date" id="r-inicio"></label>
+        <label class="campo"><span>Termina</span><input type="date" id="r-fin"></label>
+      </div>
+      <label class="campo"><span>Meta (opcional)</span>
+        <input type="number" id="r-meta" step="0.1" placeholder="sin meta: gana quien más acumule">
+      </label>
+      <div id="r-msg"></div>
+    </div>
+    <div class="modal-pie">
+      <button class="btn sec" onclick="cerrarModal('m-reto')">Cancelar</button>
+      <button class="btn" onclick="crearReto()">Crear reto</button>
+    </div>
+  </div>
+</div>
+
+<script src="vendor-qrcode.js"></script>
+<script src="qr.js"></script>
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const usuario = Sesion.exigir();
+const vista = document.getElementById("vista");
+let datos = null, grupoAbierto = null, tiposReto = [];
+
+function ruta() {
+  const h = location.hash.replace(/^#/, "");
+  const [sec, arg] = h.split("/");
+  return { sec, arg };
+}
+
+async function enrutar() {
+  pintarEstructura("grupos");
+  const { sec, arg } = ruta();
+  vista.innerHTML = '<div class="cargando">Cargando…</div>';
+  try {
+    if (sec === "grupo" && arg) await verGrupo(Number(arg));
+    else await verLista();
+  } catch (err) {
+    vista.innerHTML = `<div class="aviso ${err.sinRed ? "alerta" : "mal"}">${esc(err.message)}</div>`;
+  }
+}
+window.addEventListener("hashchange", enrutar);
+
+/* ── Lista ────────────────────────────────────────────────────────── */
+
+async function verLista() {
+  datos = await api("/grupos");
+  const g = datos.grupos;
+
+  vista.innerHTML = `
+    <div class="titulo">
+      <h1>Grupos</h1>
+      <p>Entrená con tu gente. Se compite por constancia, no por kilos.</p>
+    </div>
+
+    <div style="display:flex; gap:9px; margin-bottom:18px">
+      <button class="btn" onclick="abrirCrear()" style="flex:1"
+        ${datos.puede_crear ? "" : "disabled"}>Crear grupo</button>
+      <button class="btn sec" onclick="abrirModal('m-unirme')" style="flex:1">Entrar con un código</button>
+    </div>
+
+    ${!datos.puede_crear ? `
+      <div class="aviso info" style="margin-bottom:16px">
+        El plan ${esc(datos.plan.nombre)} permite ${datos.plan.limites.grupos}
+        grupo${datos.plan.limites.grupos === 1 ? "" : "s"} de hasta
+        ${datos.plan.limites.miembros_por_grupo} personas.
+        <a href="planes.html" style="color:var(--az)">Ver planes</a>
+      </div>` : ""}
+
+    ${g.length === 0 ? `
+      <div class="tarjeta"><div class="vacio">
+        Todavía no estás en ningún grupo.<br>
+        <span style="font-size:13px">Creá uno e invitá por WhatsApp, o entrá con el código que te pasen.</span>
+      </div></div>` :
+      g.map(x => `
+        <div class="grupo-tarjeta" onclick="location.hash='grupo/${x.id}'">
+          <div class="grupo-cab">
+            <div class="ini">${esc(iniciales(x.nombre))}</div>
+            <div class="tx">
+              <b>${esc(x.nombre)}</b>
+              <span>${x.miembros} de ${x.max_miembros} personas${
+                x.retos_activos ? ` · ${x.retos_activos} reto${x.retos_activos === 1 ? "" : "s"} activo${x.retos_activos === 1 ? "" : "s"}` : ""}</span>
+            </div>
+            ${x.mi_rol === "dueño" ? '<span class="eti azul">Tuyo</span>' : ""}
+          </div>
+        </div>`).join("")}`;
+}
+
+const iniciales = n => String(n).split(" ").filter(Boolean).map(p => p[0]).slice(0, 2).join("").toUpperCase();
+
+/* ── Detalle ──────────────────────────────────────────────────────── */
+
+async function verGrupo(id) {
+  const d = await api(`/grupos/${id}`);
+  grupoAbierto = d;
+  const g = d.grupo;
+  const medalla = p => p === 1 ? "oro" : p === 2 ? "plata" : p === 3 ? "bronce" : "";
+
+  vista.innerHTML = `
+    <div style="margin-bottom:14px">
+      <a href="#" style="font-size:13px; color:var(--tx2); text-decoration:none">← Volver a grupos</a>
+    </div>
+
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="t-cu">
+        <div class="grupo-cab" style="margin-bottom:14px">
+          <div class="ini">${esc(iniciales(g.nombre))}</div>
+          <div class="tx">
+            <b>${esc(g.nombre)}</b>
+            <span>${d.miembros.length} de ${g.max_miembros} personas</span>
+          </div>
+        </div>
+        ${g.descripcion ? `<p style="font-size:13.5px; color:var(--tx2); margin-bottom:14px">${esc(g.descripcion)}</p>` : ""}
+        <div style="display:flex; gap:9px; flex-wrap:wrap">
+          <button class="btn" onclick="abrirInvitar()" style="flex:1">Invitar</button>
+          <button class="btn sec" onclick="abrirReto()" style="flex:1">Crear reto</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="t-cab"><h2>Tabla del grupo</h2>
+        <div class="der"><span class="eti gris">por puntos</span></div>
+      </div>
+      <div class="t-cu">
+        ${d.miembros.map(m => `
+          <div class="puesto ${m.soy_yo ? "yo" : ""}">
+            <div class="pos ${medalla(m.posicion)}">${m.posicion}</div>
+            <div style="flex:1; min-width:0">
+              <div style="font-size:14.5px; font-weight:650">${esc(m.nombre)}${m.soy_yo ? " · vos" : ""}${
+                m.rol === "dueño" ? ' <span class="eti azul" style="margin-left:4px">creador</span>' : ""}</div>
+              <div style="font-size:12px; color:var(--tx3)">
+                Nivel ${m.nivel.nivel} · ${m.sesiones} sesiones · ${m.dias_mes} días este mes
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:15px; font-weight:750; font-variant-numeric:tabular-nums">${m.puntos}</div>
+              <div style="font-size:11px; color:var(--tx3)">puntos</div>
+            </div>
+          </div>`).join("")}
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <div class="t-cab"><h2>Retos</h2></div>
+      <div class="t-cu">
+        ${d.retos.length === 0
+          ? '<div class="vacio" style="padding:22px">Sin retos todavía. Creá uno y que empiece la joda.</div>'
+          : '<div id="lista-retos"><div class="cargando">Cargando retos…</div></div>'}
+      </div>
+    </div>`;
+
+  if (d.retos.length) cargarRetos();
+}
+
+async function cargarRetos() {
+  try {
+    const todos = await api("/retos");
+    const mios = todos.filter(r => r.grupo_id === grupoAbierto.grupo.id);
+    const caja = document.getElementById("lista-retos");
+    if (!caja) return;
+
+    if (mios.length === 0) {
+      caja.innerHTML = `<div class="vacio" style="padding:20px">
+        Hay retos en este grupo, pero no estás en ninguno.
+      </div>`;
+      return;
+    }
+
+    caja.innerHTML = mios.map(r => {
+      const lider = r.tabla[0];
+      return `
+        <div class="reto">
+          <div class="reto-cab">
+            <b>${esc(r.titulo)}</b>
+            <span class="eti ${r.vigente ? "ok" : "gris"}">${r.vigente ? "en curso" : "cerrado"}</span>
+          </div>
+          <div style="font-size:12.5px; color:var(--tx2); margin-bottom:10px">
+            ${esc(r.nombre_tipo)} · hasta ${fecha(r.fin)}${r.meta ? ` · meta ${r.meta} ${esc(r.unidad)}` : ""}
+          </div>
+          ${r.tabla.map(f => `
+            <div class="fila-reto">
+              <div class="n">${f.posicion}</div>
+              <div class="q">${esc(f.nombre)}${f.id === usuario.id ? " · vos" : ""}
+                ${r.meta ? `<div class="barra-reto"><div style="width:${
+                  Math.min(100, (f.valor / Number(r.meta)) * 100)}%"></div></div>` : ""}
+              </div>
+              <div class="v">${Math.round(f.valor * 10) / 10} <span style="color:var(--tx3); font-weight:500">${esc(r.unidad)}</span></div>
+            </div>`).join("")}
+          ${lider && r.vigente ? `<div style="font-size:12px; color:var(--tx3); margin-top:8px">
+            Va ganando ${esc(lider.nombre)}.</div>` : ""}
+        </div>`;
+    }).join("");
+  } catch (err) {
+    const caja = document.getElementById("lista-retos");
+    if (caja) caja.innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+/* ── Crear grupo ──────────────────────────────────────────────────── */
+
+function abrirCrear() {
+  document.getElementById("g-nombre").value = "";
+  document.getElementById("g-desc").value = "";
+  document.getElementById("g-msg").innerHTML = "";
+  abrirModal("m-crear");
+}
+
+async function crearGrupo() {
+  try {
+    const r = await api("/grupos", { method: "POST", body: {
+      nombre: document.getElementById("g-nombre").value.trim(),
+      descripcion: document.getElementById("g-desc").value.trim()
+    }});
+    cerrarModal("m-crear");
+    location.hash = "grupo/" + r.grupo.id;
+    if (ruta().arg == r.grupo.id) enrutar();
+  } catch (err) {
+    document.getElementById("g-msg").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+/* ── Unirse ───────────────────────────────────────────────────────── */
+
+let tiempoCodigo;
+function mirarCodigo() {
+  clearTimeout(tiempoCodigo);
+  const v = document.getElementById("u-codigo").value.trim().toUpperCase();
+  document.getElementById("u-vista").innerHTML = "";
+  if (v.length < 4) return;
+
+  tiempoCodigo = setTimeout(async () => {
+    try {
+      const d = await api(`/grupos/codigo/${encodeURIComponent(v)}`);
+      document.getElementById("u-vista").innerHTML = `
+        <div class="aviso ${d.ya_soy_miembro || d.lleno ? "alerta" : "ok"}">
+          <b>${esc(d.grupo.nombre)}</b>
+          De ${esc(d.grupo.creador)} · ${d.grupo.miembros} de ${d.grupo.max_miembros} personas.
+          ${d.ya_soy_miembro ? "Ya sos parte de este grupo." : d.lleno ? "Está completo." : ""}
+        </div>`;
+    } catch (err) {
+      document.getElementById("u-vista").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+    }
+  }, 400);
+}
+
+async function unirme() {
+  try {
+    const r = await api("/grupos/unirme", { method: "POST", body: {
+      codigo: document.getElementById("u-codigo").value.trim().toUpperCase()
+    }});
+    cerrarModal("m-unirme");
+    location.hash = "grupo/" + r.grupo_id;
+    enrutar();
+  } catch (err) {
+    document.getElementById("u-msg").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+/* ── Invitar: QR y WhatsApp ───────────────────────────────────────── */
+
+function abrirInvitar() {
+  const g = grupoAbierto.grupo;
+  const enlace = `${location.origin}/grupos.html#unirme/${g.codigo}`;
+
+  const texto =
+    `Te invito a entrenar conmigo en Pulso 💪\n\n` +
+    `Grupo: ${g.nombre}\n` +
+    `Código: ${g.codigo}\n\n` +
+    `Entrá acá y usá el código: ${enlace}`;
+
+  document.getElementById("inv-cuerpo").innerHTML = `
+    <p style="font-size:13.5px; color:var(--tx2); margin-bottom:16px; text-align:center">
+      Que escaneen el código, o pasales el enlace.
+    </p>
+
+    <div class="qr-caja">${QR.svg(enlace, { margen: 2 })}</div>
+
+    <div style="text-align:center; margin-bottom:6px">
+      <span class="codigo">${esc(g.codigo)}</span>
+    </div>
+    <p style="font-size:12px; color:var(--tx3); text-align:center; margin-bottom:4px">
+      También sirve dictarlo por teléfono: no lleva letras ni números que se confundan.
+    </p>
+
+    <div class="compartir">
+      <a class="btn-wa" href="https://wa.me/?text=${encodeURIComponent(texto)}"
+         target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.2-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.2-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.5-.5c.1-.2.2-.3.3-.5 0-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.6-.4M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2"/></svg>
+        WhatsApp
+      </a>
+      <button class="btn sec" onclick="copiarEnlace('${esc(enlace)}')" id="btn-copiar">
+        Copiar enlace
+      </button>
+    </div>`;
+
+  abrirModal("m-invitar");
+}
+
+async function copiarEnlace(enlace) {
+  const b = document.getElementById("btn-copiar");
+  try {
+    await navigator.clipboard.writeText(enlace);
+    b.textContent = "Copiado";
+  } catch {
+    // Sin permiso de portapapeles se muestra el enlace para copiarlo a mano.
+    prompt("Copiá este enlace:", enlace);
+    return;
+  }
+  setTimeout(() => { b.textContent = "Copiar enlace"; }, 2000);
+}
+
+/* ── Retos ────────────────────────────────────────────────────────── */
+
+async function abrirReto() {
+  if (tiposReto.length === 0) tiposReto = await api("/retos/tipos");
+
+  document.getElementById("r-titulo").value = "";
+  document.getElementById("r-meta").value = "";
+  document.getElementById("r-msg").innerHTML = "";
+  document.getElementById("r-tipo").innerHTML =
+    tiposReto.map(t => `<option value="${t.codigo}">${esc(t.nombre)}</option>`).join("");
+
+  const hoy = new Date();
+  const fin = new Date(); fin.setDate(fin.getDate() + 21);
+  document.getElementById("r-inicio").value = hoy.toISOString().slice(0, 10);
+  document.getElementById("r-fin").value = fin.toISOString().slice(0, 10);
+
+  pintarTipoReto();
+  abrirModal("m-reto");
+}
+
+function pintarTipoReto() {
+  const t = tiposReto.find(x => x.codigo === document.getElementById("r-tipo").value);
+  document.getElementById("r-desc").textContent = t ? t.descripcion : "";
+  const meta = document.getElementById("r-meta");
+  if (t) meta.placeholder = `sin meta: gana quien más ${t.unidad} acumule`;
+}
+
+async function crearReto() {
+  try {
+    await api("/retos", { method: "POST", body: {
+      grupo_id: grupoAbierto.grupo.id,
+      titulo: document.getElementById("r-titulo").value.trim(),
+      tipo: document.getElementById("r-tipo").value,
+      inicio: document.getElementById("r-inicio").value,
+      fin: document.getElementById("r-fin").value,
+      meta: document.getElementById("r-meta").value || null
+    }});
+    cerrarModal("m-reto");
+    enrutar();
+  } catch (err) {
+    document.getElementById("r-msg").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
+}
+
+/* ── Entrada por enlace: #unirme/CODIGO ───────────────────────────── */
+
+(async function inicio() {
+  const { sec, arg } = ruta();
+  if (sec === "unirme" && arg) {
+    // Alguien llegó desde un enlace o un QR: se abre el cuadro con el
+    // código ya puesto en vez de hacerle escribirlo.
+    history.replaceState(null, "", location.pathname);
+    await enrutar();
+    document.getElementById("u-codigo").value = String(arg).toUpperCase();
+    abrirModal("m-unirme");
+    mirarCodigo();
+    return;
+  }
+  enrutar();
+})();
+</script>
+</body>
+</html>

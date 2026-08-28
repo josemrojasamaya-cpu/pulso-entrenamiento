@@ -186,6 +186,7 @@ const ICONOS = {
   medidas:  '<path d="M2 8h20v8H2zM6 8v3M10 8v5M14 8v3M18 8v5"/>',
   progreso: '<path d="M3 3v18h18M7 15l4-5 3 3 5-7"/>',
   ranking:  '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+  grupos:   '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
   perfil:   '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/>'
 };
 
@@ -212,11 +213,16 @@ function pintarEstructura(activo) {
 
   const tabs = document.getElementById("tabs");
   if (tabs) {
+    // Cinco pestañas es el techo en un teléfono: con seis, cada una
+    // queda tan angosta que el texto no entra y se toca la de al lado.
+    // El ranking general vive dentro de Grupos, que es donde la
+    // comparación tiene sentido — competir con desconocidos motiva
+    // mucho menos que competir con tu gente.
     const enlaces = [
       { id:"hoy",      txt:"Hoy",      href:"hoy.html" },
       { id:"medidas",  txt:"Medidas",  href:"medidas.html" },
       { id:"progreso", txt:"Progreso", href:"progreso.html" },
-      { id:"ranking",  txt:"Ranking",  href:"ranking.html" },
+      { id:"grupos",   txt:"Grupos",   href:"grupos.html" },
       { id:"perfil",   txt:"Perfil",   href:"perfil.html" }
     ];
     tabs.innerHTML = enlaces.map(e => `
