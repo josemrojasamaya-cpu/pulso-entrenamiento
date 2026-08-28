@@ -590,3 +590,60 @@ ALTER TABLE series ADD CONSTRAINT ck_seg_trabajo
 ALTER TABLE series DROP CONSTRAINT IF EXISTS ck_seg_descanso;
 ALTER TABLE series ADD CONSTRAINT ck_seg_descanso
     CHECK (segundos_descanso IS NULL OR (segundos_descanso >= 0 AND segundos_descanso <= 3600));
+
+
+-- ---------------------------------------------------------------------
+--  Actividades · todo lo que se entrena fuera del gimnasio
+--
+--  Correr, caminar, bicicleta, natación, artes marciales, spinning.
+--  Dos mundos en una sola tabla, y a propósito:
+--
+--    CON GPS   correr, caminar, bici. Hay distancia, ritmo y desnivel.
+--    SIN GPS   natación, boxeo, gimnasia. Sólo tiempo e intensidad.
+--
+--  Separarlas en dos tablas obligaría a unirlas en cada consulta del
+--  historial, del ranking y del resumen semanal, que es donde de verdad
+--  se usan. Los campos que no aplican quedan en NULL, que es exactamente
+--  lo que significan: acá no hubo distancia, no que la distancia fue 0.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS actividades (
+    id             BIGSERIAL PRIMARY KEY,
+    id_local       VARCHAR(60),
+    usuario_id     INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    deporte        VARCHAR(30) NOT NULL,
+    intensidad     VARCHAR(10) NOT NULL DEFAULT 'medio',   -- suave | medio | fuerte
+    inicio         TIMESTAMPTZ NOT NULL,
+    segundos       INTEGER NOT NULL,
+    metros         INTEGER,
+    subida_m       INTEGER,
+    bajada_m       INTEGER,
+    velocidad_max  NUMERIC(6,2),
+    pulso_medio    INTEGER,
+    pulso_max      INTEGER,
+    calorias       INTEGER,
+    -- De dónde salieron las calorías. Importa: las estimadas por MET son
+    -- una tabla; las de un reloj con pulsómetro son una medición. Sin
+    -- esta columna las dos se verían igual en pantalla, y no lo son.
+    calorias_origen VARCHAR(12),                            -- estimada | dispositivo
+    notas          VARCHAR(300),
+    origen         VARCHAR(12) NOT NULL DEFAULT 'app',      -- app | archivo | manual
+    creada_en      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (usuario_id, id_local)
+);
+
+CREATE INDEX IF NOT EXISTS idx_act_usuario ON actividades (usuario_id, inicio DESC);
+CREATE INDEX IF NOT EXISTS idx_act_deporte ON actividades (usuario_id, deporte, inicio DESC);
+
+-- El recorrido va aparte de la actividad, y no como columna JSON dentro
+-- de ella.
+--
+-- Una hora de carrera son unos 3.600 puntos. Metidos en la fila de la
+-- actividad, cada consulta del historial —que sólo quiere la distancia y
+-- el tiempo— arrastraría megabytes de coordenadas que nadie va a mirar.
+-- Aparte, el historial vuela y el recorrido se lee sólo al abrir esa
+-- actividad.
+CREATE TABLE IF NOT EXISTS recorridos (
+    actividad_id BIGINT PRIMARY KEY REFERENCES actividades(id) ON DELETE CASCADE,
+    puntos       JSONB NOT NULL,
+    n_puntos     INTEGER NOT NULL DEFAULT 0
+);

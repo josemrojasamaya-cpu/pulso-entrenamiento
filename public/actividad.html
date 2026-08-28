@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1620">
+<title>Pulso · Actividades</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+<style>
+.deportes{display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:9px}
+.dep{
+  padding:15px 8px; border:1px solid var(--borde); border-radius:13px;
+  background:var(--gr-850); cursor:pointer; text-align:center; transition:.15s;
+}
+.dep:hover{border-color:var(--az); background:var(--az-tenue)}
+.dep.on{border-color:var(--az); background:var(--az-tenue)}
+.dep svg{width:26px; height:26px; stroke:var(--az); fill:none; stroke-width:1.8;
+  stroke-linecap:round; stroke-linejoin:round; margin-bottom:7px}
+.dep b{display:block; font-size:12px; font-weight:650; line-height:1.25}
+.dep span{display:block; font-size:9.5px; color:var(--tx3); margin-top:3px}
+
+/* Registro en vivo */
+.vivo-act{
+  position:fixed; inset:0; z-index:60; background:var(--gr-950);
+  display:none; flex-direction:column;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+.vivo-act.on{display:flex}
+.va-top{padding:14px 18px; border-bottom:1px solid var(--borde); flex:none;
+  display:flex; align-items:center; gap:12px}
+.va-top b{flex:1; font-size:15px; font-weight:700}
+.va-gps{font-size:11px; padding:4px 9px; border-radius:20px; font-weight:700}
+.va-gps.buscando{background:var(--adv-tenue); color:var(--adv); border:1px solid var(--adv-3)}
+.va-gps.bien{background:var(--ok-tenue); color:var(--ok); border:1px solid var(--ok-3)}
+.va-gps.mal{background:var(--mal-tenue); color:var(--mal); border:1px solid var(--mal-3)}
+
+.va-cuerpo{flex:1; overflow-y:auto; padding:18px; display:flex;
+  flex-direction:column; justify-content:center}
+.va-reloj{text-align:center; margin-bottom:6px}
+.va-reloj .n{font-size:64px; font-weight:900; line-height:1; letter-spacing:-2.5px;
+  font-variant-numeric:tabular-nums}
+.va-reloj .e{font-size:11px; color:var(--tx3); text-transform:uppercase;
+  letter-spacing:1.6px; font-weight:700; margin-top:6px}
+
+.va-datos{display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin:26px 0}
+.va-datos div{padding:15px 6px; background:var(--gr-850); border:1px solid var(--borde);
+  border-radius:12px; text-align:center}
+.va-datos b{display:block; font-size:21px; font-weight:800; font-variant-numeric:tabular-nums}
+.va-datos span{display:block; font-size:9.5px; color:var(--tx3); margin-top:3px;
+  text-transform:uppercase; letter-spacing:.6px}
+
+.va-pie{flex:none; padding:14px 18px calc(14px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--borde)}
+.b-act{
+  width:100%; padding:20px; border:none; border-radius:15px; color:#fff;
+  font:inherit; font-size:18px; font-weight:800; cursor:pointer; transition:.15s;
+  background:linear-gradient(160deg,var(--az),var(--az-2));
+}
+.b-act:active{transform:scale(.98)}
+.b-act.parar{background:linear-gradient(160deg,#c9603c,#a44a2c)}
+.b-act.seguir{background:linear-gradient(160deg,var(--ok),#1d7a54)}
+.fila-act{display:flex; gap:8px; margin-top:9px}
+.fila-act button{flex:1; padding:13px; border:1px solid var(--borde); border-radius:12px;
+  background:var(--gr-850); color:var(--tx2); font:inherit; font-size:13.5px;
+  font-weight:600; cursor:pointer}
+
+/* Mapa: el recorrido dibujado con los propios puntos */
+.mapa{
+  width:100%; aspect-ratio:4/3; background:var(--gr-900); border-radius:13px;
+  border:1px solid var(--borde); overflow:hidden; position:relative;
+}
+.mapa svg{width:100%; height:100%; display:block}
+.mapa .escala{
+  position:absolute; left:10px; bottom:10px; font-size:10.5px; color:var(--tx3);
+  background:rgba(6,10,16,.75); padding:3px 8px; border-radius:6px;
+}
+
+/* Historial */
+.act-f{
+  display:flex; align-items:center; gap:13px; padding:14px 0;
+  border-bottom:1px solid var(--borde); cursor:pointer;
+}
+.act-f:last-child{border-bottom:none}
+.act-f:hover{background:var(--gr-875)}
+.act-f .ico{width:40px; height:40px; border-radius:11px; flex:none;
+  display:grid; place-items:center; background:var(--gr-750)}
+.act-f .ico svg{width:20px; height:20px; stroke:var(--az); fill:none; stroke-width:1.8;
+  stroke-linecap:round; stroke-linejoin:round}
+.act-f .tx{flex:1; min-width:0}
+.act-f .tx b{display:block; font-size:14.5px; font-weight:650}
+.act-f .tx span{font-size:11.5px; color:var(--tx3)}
+.act-f .der{text-align:right; flex:none}
+.act-f .der b{display:block; font-size:15px; font-weight:750; font-variant-numeric:tabular-nums}
+.act-f .der span{font-size:11px; color:var(--tx3)}
+
+.resu{display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:9px}
+.resu div{padding:13px 8px; background:var(--gr-850); border:1px solid var(--borde);
+  border-radius:11px; text-align:center}
+.resu b{display:block; font-size:18px; font-weight:800; font-variant-numeric:tabular-nums}
+.resu span{display:block; font-size:10px; color:var(--tx3); margin-top:2px}
+
+.intensidades{display:flex; gap:7px; margin-top:12px}
+.intensidades button{
+  flex:1; padding:11px; border:1px solid var(--borde); border-radius:11px;
+  background:var(--gr-850); color:var(--tx2); font:inherit; font-size:13px;
+  font-weight:600; cursor:pointer;
+}
+.intensidades button.on{border-color:var(--az); background:var(--az-tenue); color:var(--tx)}
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="pagina">
+  <div class="titulo">
+    <h1>Actividades</h1>
+    <p>Correr, caminar, bici, natación, artes marciales. Todo lo que no es sala de pesas.</p>
+  </div>
+
+  <div class="tarjeta" style="margin-bottom:16px">
+    <div class="t-cab"><h2>Empezar una actividad</h2></div>
+    <div class="t-cu"><div class="deportes" id="deportes"><div class="cargando">Cargando…</div></div></div>
+  </div>
+
+  <div id="resumen"></div>
+  <div id="historial"></div>
+</main>
+
+<!-- Registro en vivo -->
+<div class="vivo-act" id="vivo">
+  <div class="va-top">
+    <b id="v-deporte">—</b>
+    <span class="va-gps buscando" id="v-gps">GPS</span>
+  </div>
+  <div class="va-cuerpo">
+    <div class="va-reloj"><div class="n" id="v-reloj">0:00</div><div class="e">Tiempo</div></div>
+    <div class="va-datos" id="v-datos"></div>
+    <div id="v-mapa"></div>
+  </div>
+  <div class="va-pie" id="v-pie"></div>
+</div>
+
+<nav class="tabs" id="tabs"></nav>
+
+<script src="almacen.js"></script>
+<script src="comun.js"></script>
+<script>
+const usuario = Sesion.exigir();
+let deportes = [], deporte = null, intensidad = "medio";
+
+/* Los íconos van acá y no como archivos: son doce trazos, y un archivo
+   por deporte serían doce peticiones más en una pantalla que se abre
+   con el teléfono en la mano y datos móviles. */
+const ICONOS_DEPORTE = {
+  correr:   "M13 4a1.6 1.6 0 100-.1M8 20l2.5-5 2-2.5-1-4.5L8 10l-2 3M12.5 8l3.5 1.5 2 3.5M10.5 12.5L13 16l1 4",
+  caminar:  "M13 4a1.5 1.5 0 100-.1M11 21l1-6-2-3V8l3-1 2 3 2 1M12 12l-2 4",
+  bici:     "M5.5 18.5a3 3 0 100-6 3 3 0 000 6zM18.5 18.5a3 3 0 100-6 3 3 0 000 6zM8 15l3-6h4l-2.5 6M15 5h2M14.5 4.5a1 1 0 100-.1",
+  agua:     "M3 15c2 0 2.5-1.5 4.5-1.5S10 15 12 15s2.5-1.5 4.5-1.5S19 15 21 15M3 19c2 0 2.5-1.5 4.5-1.5S10 19 12 19s2.5-1.5 4.5-1.5S19 19 21 19M6 10l6-5 6 5",
+  montana:  "M3 20l6-11 4 6 2-3 6 8z",
+  remo:     "M4 20l4-4M20 4l-6 6M14 10l-4 4M9 15l-3-3M17 7l-3-3",
+  marcial:  "M12 4a2 2 0 100-.1M8 21v-6l-2-4 3-3h4l3 3v5M10 15l4 6",
+  gimnasia: "M12 3a1.8 1.8 0 100-.1M6 9h12M9 9v5l-2 6M15 9v5l2 6",
+  baile:    "M14 4a1.7 1.7 0 100-.1M9 21l3-6-2-4 3-4 3 3 3 1M12 15l3 6",
+  pelota:   "M12 3a9 9 0 100 18 9 9 0 000-18zM12 3v18M3 12h18M6 6l12 12M18 6L6 18",
+  yoga:     "M12 4a1.7 1.7 0 100-.1M12 8v6M6 20l6-6 6 6M7 11h10",
+  otro:     "M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 3"
+};
+const icono = (n) => `<svg viewBox="0 0 24 24"><path d="${ICONOS_DEPORTE[n] || ICONOS_DEPORTE.otro}"/></svg>`;
+
+/* ── Catálogo ─────────────────────────────────────────────────────── */
+
+async function verDeportes() {
+  try { deportes = (await api("/actividades/deportes")).deportes; }
+  catch (err) {
+    document.getElementById("deportes").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+    return;
+  }
+  document.getElementById("deportes").innerHTML = deportes.map(d => `
+    <div class="dep" onclick="abrir('${d.codigo}')">
+      ${icono(d.icono)}
+      <b>${esc(d.nombre)}</b>
+      <span>${d.gps ? "Con GPS" : "Sin GPS"}</span>
+    </div>`).join("");
+}
+
+/* ── Registro en vivo ─────────────────────────────────────────────── */
+
+let corriendo = false, pausado = false;
+let t0 = 0, acumulado = 0, tickAct = null;
+let vigia = null, puntos = [], gpsEstado = "buscando";
+let candadoAct = null;
+
+function abrir(codigo) {
+  deporte = deportes.find(d => d.codigo === codigo);
+  if (!deporte) return;
+
+  corriendo = false; pausado = false; acumulado = 0; puntos = [];
+  gpsEstado = deporte.gps ? "buscando" : "no";
+
+  document.getElementById("v-deporte").textContent = deporte.nombre;
+  document.getElementById("vivo").classList.add("on");
+  document.getElementById("v-gps").style.display = deporte.gps ? "" : "none";
+  document.getElementById("v-reloj").textContent = "0:00";
+
+  pintarDatos(); pintarPieAct();
+}
+
+function cerrar() {
+  if (corriendo && !confirm("Vas a salir sin guardar la actividad. ¿Salir?")) return;
+  pararTodo();
+  document.getElementById("vivo").classList.remove("on");
+  document.getElementById("v-mapa").innerHTML = "";
+}
+
+function empezar() {
+  corriendo = true; pausado = false;
+  t0 = Date.now();
+  if (deporte.gps) seguirGPS();
+  trabar();
+  correrAct();
+  pintarPieAct();
+  if (navigator.vibrate) navigator.vibrate(40);
+}
+
+function pausar() {
+  pausado = true;
+  acumulado += Date.now() - t0;
+  // El GPS se apaga en la pausa. Dejarlo encendido gastaría batería
+  // durante el descanso y, peor, seguiría sumando el temblor del punto
+  // como si la persona se estuviera moviendo.
+  if (vigia !== null) { navigator.geolocation.clearWatch(vigia); vigia = null; }
+  pintarPieAct();
+}
+
+function reanudar() {
+  pausado = false; t0 = Date.now();
+  if (deporte.gps) seguirGPS();
+  pintarPieAct();
+}
+
+/**
+ * Sigue la posición.
+ *
+ * `enableHighAccuracy` enciende el GPS de verdad en vez de la posición
+ * aproximada por antenas. Gasta más batería, y es la única forma de
+ * medir una carrera: la posición por antenas se equivoca por cuadras.
+ */
+function seguirGPS() {
+  if (!navigator.geolocation) { gpsEstado = "mal"; pintarGPS(); return; }
+
+  vigia = navigator.geolocation.watchPosition(
+    (pos) => {
+      const c = pos.coords;
+      gpsEstado = c.accuracy <= 25 ? "bien" : "buscando";
+      puntos.push({
+        lat: c.latitude, lon: c.longitude,
+        altitud: Number.isFinite(c.altitude) ? c.altitude : undefined,
+        precision: c.accuracy, t: pos.timestamp || Date.now()
+      });
+      pintarGPS(); pintarDatos(); pintarMapa();
+    },
+    (err) => {
+      gpsEstado = "mal"; pintarGPS();
+      if (err.code === 1) {
+        alert("Sin permiso de ubicación no se puede medir la distancia. " +
+              "Podés seguir midiendo el tiempo, y anotar la distancia al final.");
+      }
+    },
+    { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+  );
+}
+
+function pintarGPS() {
+  const e = document.getElementById("v-gps");
+  e.className = "va-gps " + (gpsEstado === "bien" ? "bien" : gpsEstado === "mal" ? "mal" : "buscando");
+  e.textContent = gpsEstado === "bien" ? "GPS listo"
+                : gpsEstado === "mal" ? "Sin GPS" : "Buscando…";
+}
+
+async function trabar() {
+  if (!("wakeLock" in navigator)) return;
+  try { candadoAct = await navigator.wakeLock.request("screen"); } catch (e) {}
+}
+
+function correrAct() {
+  clearInterval(tickAct);
+  tickAct = setInterval(() => {
+    if (pausado) return;
+    const s = Math.floor((acumulado + Date.now() - t0) / 1000);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    document.getElementById("v-reloj").textContent = h > 0
+      ? `${h}:${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
+      : `${m}:${String(s % 60).padStart(2, "0")}`;
+    if (s % 5 === 0) pintarDatos();
+  }, 250);
+}
+
+const segundosAct = () => Math.floor((acumulado + (pausado || !corriendo ? 0 : Date.now() - t0)) / 1000);
+
+/**
+ * Distancia y ritmo mientras se corre.
+ *
+ * Es el MISMO filtrado que hace el servidor al guardar. Se repite acá a
+ * propósito: si la pantalla mostrara la suma cruda y el servidor la
+ * filtrada, la persona vería 6,2 km durante la carrera y 5,8 km al
+ * guardarla, y pensaría —con razón— que la aplicación le robó distancia.
+ */
+function medir() {
+  if (puntos.length < 2) return { metros: 0, subida: 0 };
+
+  const techo = deporte.codigo === "bicicleta" ? 28 : 12;
+  const R = 6371000, rad = g => g * Math.PI / 180;
+  const p = puntos.filter(x => !Number.isFinite(x.precision) || x.precision <= 50);
+  if (p.length < 2) return { metros: 0, subida: 0 };
+
+  let metros = 0, subida = 0;
+  let altRef = Number.isFinite(p[0].altitud) ? p[0].altitud : null;
+
+  for (let i = 1; i < p.length; i++) {
+    const a = p[i - 1], b = p[i];
+    const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+    const x = Math.sin(dLat / 2) ** 2 +
+              Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+    const d = 2 * R * Math.asin(Math.sqrt(x));
+    const dt = (b.t - a.t) / 1000;
+
+    if (d < Math.max(b.precision || 0, a.precision || 0, 3)) continue;
+    if (dt > 0 && d / dt > techo) continue;
+    metros += d;
+
+    if (Number.isFinite(b.altitud)) {
+      if (altRef === null) altRef = b.altitud;
+      const dA = b.altitud - altRef;
+      if (Math.abs(dA) >= 5) { if (dA > 0) subida += dA; altRef = b.altitud; }
+    }
+  }
+  return { metros: Math.round(metros), subida: Math.round(subida) };
+}
+
+function pintarDatos() {
+  const s = segundosAct();
+  const m = deporte && deporte.gps ? medir() : { metros: 0, subida: 0 };
+  const z = document.getElementById("v-datos");
+
+  if (deporte && deporte.gps) {
+    const km = m.metros / 1000;
+    const minKm = km > 0 && s > 0 ? (s / 60) / km : 0;
+    const kmh = s > 0 ? km / (s / 3600) : 0;
+    const esBici = deporte.codigo === "bicicleta";
+
+    z.innerHTML = `
+      <div><b>${km.toFixed(2)}</b><span>km</span></div>
+      <div><b>${esBici ? kmh.toFixed(1) : (minKm > 0 && minKm < 99
+        ? `${Math.floor(minKm)}:${String(Math.round((minKm % 1) * 60)).padStart(2, "0")}` : "—")}</b>
+        <span>${esBici ? "km/h" : "min/km"}</span></div>
+      <div><b>${m.subida}</b><span>m subidos</span></div>`;
+  } else {
+    z.innerHTML = `
+      <div><b>${Math.round(s / 60)}</b><span>minutos</span></div>
+      <div><b>${esc(intensidadTexto())}</b><span>intensidad</span></div>
+      <div><b>${puntos.length ? "GPS" : "—"}</b><span>${deporte ? esc(deporte.nombre) : ""}</span></div>`;
+  }
+}
+
+const intensidadTexto = () =>
+  intensidad === "suave" ? "Suave" : intensidad === "fuerte" ? "Fuerte" : "Media";
+
+/**
+ * Dibuja el recorrido con los propios puntos.
+ *
+ * No hay mapa de calles de fondo, y es una decisión, no una carencia:
+ * las teselas de un mapa vienen de un proveedor que cobra por uso o pone
+ * condiciones, y esta aplicación no depende de ninguno. La forma del
+ * recorrido —el trazo, las vueltas, dónde se dio la vuelta— se ve igual,
+ * y es lo que la persona reconoce de su propia ruta.
+ *
+ * La proyección corrige la longitud por el coseno de la latitud. Sin
+ * eso, un recorrido en Costa Rica se vería estirado a lo ancho.
+ */
+function pintarMapa() {
+  const z = document.getElementById("v-mapa");
+  const p = puntos.filter(x => !Number.isFinite(x.precision) || x.precision <= 50);
+  if (p.length < 3) { z.innerHTML = ""; return; }
+
+  z.innerHTML = `<div class="mapa">${svgRecorrido(p)}</div>`;
+}
+
+function svgRecorrido(p, alto) {
+  const latMedia = p.reduce((a, x) => a + x.lat, 0) / p.length;
+  const k = Math.cos(latMedia * Math.PI / 180);
+
+  const xs = p.map(x => x.lon * k), ys = p.map(x => -x.lat);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+  const anchoG = Math.max(maxX - minX, 1e-9), altoG = Math.max(maxY - minY, 1e-9);
+  const W = 400, H = alto || 300, pad = 22;
+  // Una sola escala para los dos ejes: escalarlos por separado deformaría
+  // el recorrido, y una vuelta a la manzana se vería como un rectángulo
+  // largo. La forma tiene que ser reconocible.
+  const escala = Math.min((W - pad * 2) / anchoG, (H - pad * 2) / altoG);
+  const offX = (W - anchoG * escala) / 2, offY = (H - altoG * escala) / 2;
+
+  const d = p.map((x, i) =>
+    `${i === 0 ? "M" : "L"}${((x.lon * k - minX) * escala + offX).toFixed(1)},` +
+    `${((-x.lat - minY) * escala + offY).toFixed(1)}`).join(" ");
+
+  const px = (x) => ((x.lon * k - minX) * escala + offX).toFixed(1);
+  const py = (x) => ((-x.lat - minY) * escala + offY).toFixed(1);
+
+  // Cuánto mide en la realidad el ancho del dibujo, para la escala.
+  const metrosAncho = anchoG / k * 111195;
+
+  return `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="g-ruta" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#4a8ee0"/><stop offset="100%" stop-color="#2b74c4"/>
+        </linearGradient>
+      </defs>
+      <path d="${d}" fill="none" stroke="rgba(43,116,196,.25)" stroke-width="9"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${d}" fill="none" stroke="url(#g-ruta)" stroke-width="3.2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${px(p[0])}" cy="${py(p[0])}" r="5.5" fill="#268a60" stroke="#0e1620" stroke-width="2"/>
+      <circle cx="${px(p[p.length - 1])}" cy="${py(p[p.length - 1])}" r="5.5"
+              fill="#c9603c" stroke="#0e1620" stroke-width="2"/>
+    </svg>
+    <div class="escala">${metrosAncho > 1000
+      ? (metrosAncho / 1000).toFixed(1) + " km de ancho"
+      : Math.round(metrosAncho) + " m de ancho"}</div>`;
+}
+
+function pintarPieAct() {
+  const p = document.getElementById("v-pie");
+  if (!corriendo) {
+    p.innerHTML = `
+      ${!deporte.gps ? `<div class="intensidades">
+        <button class="${intensidad === "suave" ? "on" : ""}" onclick="ponerIntensidad('suave')">Suave</button>
+        <button class="${intensidad === "medio" ? "on" : ""}" onclick="ponerIntensidad('medio')">Media</button>
+        <button class="${intensidad === "fuerte" ? "on" : ""}" onclick="ponerIntensidad('fuerte')">Fuerte</button>
+      </div>` : ""}
+      <button class="b-act" onclick="empezar()" style="margin-top:${deporte.gps ? "0" : "10px"}">Empezar</button>
+      <div class="fila-act"><button onclick="cerrar()">Cancelar</button></div>`;
+  } else if (pausado) {
+    p.innerHTML = `
+      <button class="b-act seguir" onclick="reanudar()">Seguir</button>
+      <div class="fila-act"><button onclick="terminarAct()">Terminar y guardar</button></div>`;
+  } else {
+    p.innerHTML = `
+      <button class="b-act parar" onclick="pausar()">Pausar</button>
+      <div class="fila-act"><button onclick="terminarAct()">Terminar y guardar</button></div>`;
+  }
+}
+
+function ponerIntensidad(i) { intensidad = i; pintarPieAct(); pintarDatos(); }
+
+function pararTodo() {
+  clearInterval(tickAct); tickAct = null;
+  if (vigia !== null) { navigator.geolocation.clearWatch(vigia); vigia = null; }
+  if (candadoAct) { try { candadoAct.release(); } catch (e) {} candadoAct = null; }
+  corriendo = false;
+}
+
+async function terminarAct() {
+  const seg = segundosAct();
+  if (seg < 30) {
+    if (!confirm("Menos de medio minuto no se puede guardar. ¿Descartar la actividad?")) return;
+    pararTodo(); document.getElementById("vivo").classList.remove("on"); return;
+  }
+
+  const inicio = new Date(Date.now() - seg * 1000).toISOString();
+  pararTodo();
+
+  // Sin GPS se pregunta la distancia: quien nada o corre en cinta la
+  // sabe, y el teléfono no tiene forma de saberla.
+  let metrosManual = 0;
+  if (!deporte.gps || puntos.length < 3) {
+    const r = prompt(`¿Cuántos metros hiciste en ${deporte.nombre.toLowerCase()}? ` +
+                     `(dejalo vacío si no aplica)`, "");
+    metrosManual = Number(r) || 0;
+  }
+
+  const cuerpo = {
+    id_local: `act-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    deporte: deporte.codigo, intensidad, inicio, segundos: seg,
+    puntos: puntos.length >= 2 ? puntos : undefined,
+    metros: metrosManual || undefined
+  };
+
+  try {
+    const r = await api("/actividades", { method: "POST", body: cuerpo });
+    document.getElementById("vivo").classList.remove("on");
+    mostrarResultado(r, seg);
+    verHistorial();
+  } catch (err) {
+    alert(err.message + "\n\nLa actividad no se guardó. Podés anotarla a mano desde el historial.");
+    document.getElementById("vivo").classList.remove("on");
+  }
+}
+
+function mostrarResultado(r, seg) {
+  const km = (r.metros || 0) / 1000;
+  alert(
+    `${deporte.nombre} guardada\n\n` +
+    `Tiempo: ${Math.floor(seg / 60)} min\n` +
+    (km > 0 ? `Distancia: ${km.toFixed(2)} km\n` : "") +
+    (r.ritmo ? `Ritmo: ${r.ritmo} min/km\n` : "") +
+    (r.subida ? `Subida: ${r.subida} m\n` : "") +
+    (r.calorias ? `Calorías: ${r.calorias} (${r.calorias_origen === "estimada" ? "estimadas" : "de tu reloj"})\n` : "") +
+    (r.puntos_ganados ? `\n+${r.puntos_ganados} puntos` : "")
+  );
+}
+
+/* ── Historial ────────────────────────────────────────────────────── */
+
+async function verHistorial() {
+  let d;
+  try { d = await api("/actividades"); }
+  catch (err) {
+    document.getElementById("historial").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+    return;
+  }
+
+  const r30 = d.resumen_30d || [];
+  document.getElementById("resumen").innerHTML = r30.length === 0 ? "" : `
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="t-cab"><h2>Últimos 30 días</h2></div>
+      <div class="t-cu"><div class="resu">
+        ${r30.map(x => `<div>
+          <b>${Math.round(x.segundos / 60)}</b>
+          <span>min · ${esc(x.nombre)}</span>
+        </div>`).join("")}
+      </div></div>
+    </div>`;
+
+  const a = d.actividades || [];
+  document.getElementById("historial").innerHTML = `
+    <div class="tarjeta">
+      <div class="t-cab"><h2>Tu historial</h2></div>
+      <div class="t-cu">
+        ${a.length === 0 ? `<p style="font-size:13px; color:var(--tx2); line-height:1.6">
+          Todavía no registraste ninguna actividad. Elegí un deporte arriba y tocá empezar.</p>`
+        : a.map(x => `
+          <div class="act-f" onclick="verUna(${x.id})">
+            <div class="ico">${icono((deportes.find(d2 => d2.codigo === x.deporte) || {}).icono || "otro")}</div>
+            <div class="tx">
+              <b>${esc(x.nombre_deporte)}</b>
+              <span>${fecha(x.inicio)}${x.calorias ? ` · ${x.calorias} kcal${
+                x.calorias_origen === "estimada" ? " (est.)" : ""}` : ""}</span>
+            </div>
+            <div class="der">
+              <b>${Math.round(x.segundos / 60)} min</b>
+              <span>${x.metros > 0 ? (x.metros / 1000).toFixed(2) + " km" : "—"}</span>
+            </div>
+          </div>`).join("")}
+      </div>
+    </div>`;
+}
+
+async function verUna(id) {
+  let d;
+  try { d = await api("/actividades/" + id); }
+  catch (err) { alert(err.message); return; }
+
+  const a = d.actividad;
+  const rec = d.recorrido;
+
+  document.getElementById("historial").insertAdjacentHTML("afterbegin", `
+    <div class="tarjeta" id="detalle" style="margin-bottom:16px">
+      <div class="t-cab">
+        <h2>${esc(a.nombre_deporte)}</h2>
+        <button class="btn sec chico" onclick="document.getElementById('detalle').remove()">Cerrar</button>
+      </div>
+      <div class="t-cu">
+        ${rec && rec.length >= 3 ? `<div class="mapa" style="margin-bottom:14px">
+          ${svgRecorrido(rec.map(p => ({ lat: p.lat, lon: p.lon, altitud: p.a, t: p.t })))}
+        </div>` : ""}
+        <div class="resu">
+          <div><b>${Math.round(a.segundos / 60)}</b><span>minutos</span></div>
+          ${a.metros ? `<div><b>${(a.metros / 1000).toFixed(2)}</b><span>km</span></div>` : ""}
+          ${a.ritmo ? `<div><b>${esc(a.ritmo)}</b><span>min/km</span></div>` : ""}
+          ${a.subida_m ? `<div><b>${a.subida_m}</b><span>m subidos</span></div>` : ""}
+          ${a.calorias ? `<div><b>${a.calorias}</b><span>kcal</span></div>` : ""}
+          ${a.pulso_medio ? `<div><b>${a.pulso_medio}</b><span>ppm medio</span></div>` : ""}
+        </div>
+        ${a.calorias_origen === "estimada" ? `
+          <p style="font-size:11.5px; color:var(--tx3); margin-top:12px; line-height:1.5">
+            Las calorías son una estimación por tiempo, peso e intensidad. Un reloj con
+            pulsómetro afina más: si importás sus datos, se usa el número tuyo.</p>` : ""}
+        <button class="btn sec" style="width:100%; margin-top:14px"
+                onclick="borrarAct(${a.id})">Borrar actividad</button>
+      </div>
+    </div>`);
+  window.scrollTo({ top: document.getElementById("detalle").offsetTop - 70, behavior: "smooth" });
+}
+
+async function borrarAct(id) {
+  if (!confirm("¿Borrar esta actividad? No se puede deshacer.")) return;
+  try { await api("/actividades/" + id, { method: "DELETE" }); verHistorial(); }
+  catch (err) { alert(err.message); }
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("vivo").classList.contains("on")) cerrar();
+});
+
+pintarEstructura("salud");
+verDeportes().then(verHistorial);
+</script>
+</body>
+</html>

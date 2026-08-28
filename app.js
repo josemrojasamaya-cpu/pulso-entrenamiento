@@ -68,6 +68,7 @@ app.use("/api/progreso", require("./routes/progreso.routes"));
 app.use("/api/grupos", require("./routes/grupos.routes"));
 app.use("/api/retos", require("./routes/retos.routes"));
 app.use("/api/salud", require("./routes/salud.routes"));
+app.use("/api/actividades", require("./routes/actividades.routes"));
 
 /** Catálogo de planes. Público: se muestra antes de tener cuenta. */
 app.get("/api/planes", (req, res) => res.json(require("./lib/planes").catalogo()));

@@ -12,6 +12,7 @@ const SUITES = [
     { archivo: "motor.js",      necesitaServidor: false },
     { archivo: "importar.js",   necesitaServidor: false },
     { archivo: "cronometro.js", necesitaServidor: false },
+    { archivo: "actividades.js", necesitaServidor: false },
     { archivo: "api.js",        necesitaServidor: true  }
 ];
 
