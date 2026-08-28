@@ -362,7 +362,13 @@ function abrirNueva() {
   abrirModal("m-nueva");
 }
 
+let guardando = false;
+
 async function guardar() {
+  // Sin este cerrojo, dos toques seguidos mandan la medición dos veces.
+  // El patrón ya estaba en la pantalla de acceso y faltaba en el resto.
+  if (guardando) return;
+
   const cuerpo = { fecha: document.getElementById("f-fecha").value || hoyISO(),
                    notas: document.getElementById("f-notas").value.trim() || null };
   let alguno = false;
@@ -376,6 +382,10 @@ async function guardar() {
     return;
   }
 
+  const boton = document.querySelector("#m-nueva .modal-pie .btn:not(.sec)");
+  guardando = true;
+  if (boton) { boton.disabled = true; boton.textContent = "Guardando…"; }
+
   try {
     await api(`/atleta/${usuario.id}/mediciones`, { method:"POST", body: cuerpo });
     cerrarModal("m-nueva");
@@ -383,6 +393,9 @@ async function guardar() {
     mostrarNivel();
   } catch (err) {
     document.getElementById("f-msg").innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+  } finally {
+    guardando = false;
+    if (boton) { boton.disabled = false; boton.textContent = "Guardar"; }
   }
 }
 

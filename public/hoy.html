@@ -120,7 +120,8 @@
 <nav class="tabs" id="tabs"></nav>
 
 <!-- Cronómetro de descanso -->
-<div class="descanso" id="descanso">
+<div class="descanso" id="descanso" role="dialog" aria-label="Descanso"
+     onclick="if(event.target===this) cerrarDescanso()">
   <div class="t">Descanso</div>
   <div class="n" id="cuenta">90</div>
   <div class="acciones">
@@ -151,6 +152,7 @@ async function cargar() {
     // Se deja descargada la de mañana: cuando la persona llegue al
     // gimnasio sin señal, ya la va a tener.
     descargarPaquete();
+    reintentarCierrePendiente();
 
   } catch (err) {
     if (err.sinRed) {
@@ -180,6 +182,20 @@ async function cargar() {
 
     vista.innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
   }
+}
+
+/**
+ * Reintenta marcar como completada una sesión que quedó sin confirmar
+ * por falta de señal.
+ */
+async function reintentarCierrePendiente() {
+  const id = await Almacen.leerDato("rutina_por_completar").catch(() => null);
+  if (!id) return;
+  try {
+    await api(`/entrenamiento/rutina/${id}/estado`, { method: "POST", body: { estado: "completada" } });
+    await Almacen.guardarDato("rutina_por_completar", null);
+    mostrarNivel();
+  } catch { /* sigue pendiente para el próximo intento */ }
 }
 
 async function descargarPaquete() {
@@ -266,7 +282,10 @@ function pintarEjercicio(e, i) {
 
   return `
     <div class="ejercicio ${listo ? "listo" : ""}" id="ej-${e.id}">
-      <div class="ej-cab" onclick="alternar(${e.id})">
+      <div class="ej-cab" role="button" tabindex="0"
+           aria-expanded="false" aria-controls="cuerpo-${e.id}"
+           onclick="alternar(${e.id})"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();alternar(${e.id})}">
         <div class="ej-num">${listo ? "✓" : i + 1}</div>
         <div class="ej-info">
           <b>${esc(e.nombre)}</b>
@@ -275,7 +294,7 @@ function pintarEjercicio(e, i) {
         ${e.peso_sugerido_kg ? `<div class="ej-peso">${e.peso_sugerido_kg}<small>kg</small></div>` : ""}
       </div>
 
-      <div class="ej-cuerpo">
+      <div class="ej-cuerpo" id="cuerpo-${e.id}">
         ${e.instrucciones ? `<div class="instruccion">${esc(e.instrucciones)}</div>` : ""}
         ${e.nota ? `<div class="instruccion" style="border:none; padding-top:0">${esc(e.nota)}</div>` : ""}
 
@@ -310,12 +329,15 @@ function pintarSerie(e, num, hecha, esTiempo) {
     return `
       <div class="serie-fila ${hecha ? "hecha" : ""}" style="grid-template-columns:34px 1fr 64px auto">
         <div class="n">${num}</div>
-        <input type="number" inputmode="numeric" id="${idReps}"
+        <input type="number" inputmode="numeric" id="${idReps}" step="1" min="1"
+               aria-label="Serie ${num}: ${unidad === "seg" ? "segundos" : "minutos"}"
                value="${hecha ? hecha.repeticiones : e.rep_min}" placeholder="${unidad}"
                ${hecha ? "disabled" : ""}>
         <input type="number" inputmode="decimal" id="${idRpe}" step="0.5" min="1" max="10"
+               aria-label="Serie ${num}: esfuerzo del 1 al 10"
                value="${hecha && hecha.rpe ? hecha.rpe : ""}" placeholder="RPE" ${hecha ? "disabled" : ""}>
         <button class="btn-serie ${hecha ? "hecha" : ""}" id="b-${e.id}-${num}"
+                aria-label="Guardar la serie ${num}"
                 onclick="registrar(${e.id}, ${e.ejercicio_id}, ${num}, ${e.descanso_seg})"
                 ${hecha ? "disabled" : ""}>${hecha ? "✓" : "Listo"}</button>
       </div>`;
@@ -324,15 +346,19 @@ function pintarSerie(e, num, hecha, esTiempo) {
   return `
     <div class="serie-fila ${hecha ? "hecha" : ""}">
       <div class="n">${num}</div>
-      <input type="number" inputmode="decimal" id="${idPeso}" step="0.5" min="0"
+      <input type="number" inputmode="decimal" id="${idPeso}" step="0.5" min="0" max="600"
+             aria-label="Serie ${num}: peso en kilos"
              value="${hecha ? hecha.peso_kg : (e.peso_sugerido_kg ?? "")}"
              placeholder="kg" ${hecha ? "disabled" : ""}>
-      <input type="number" inputmode="numeric" id="${idReps}" min="1"
+      <input type="number" inputmode="numeric" id="${idReps}" step="1" min="1" max="200"
+             aria-label="Serie ${num}: repeticiones"
              value="${hecha ? hecha.repeticiones : ""}"
              placeholder="${e.rep_min}-${e.rep_max}" ${hecha ? "disabled" : ""}>
       <input type="number" inputmode="decimal" id="${idRpe}" step="0.5" min="1" max="10"
+             aria-label="Serie ${num}: esfuerzo del 1 al 10"
              value="${hecha && hecha.rpe ? hecha.rpe : ""}" placeholder="—" ${hecha ? "disabled" : ""}>
       <button class="btn-serie ${hecha ? "hecha" : ""}" id="b-${e.id}-${num}"
+              aria-label="Guardar la serie ${num}"
               onclick="registrar(${e.id}, ${e.ejercicio_id}, ${num}, ${e.descanso_seg})"
               ${hecha ? "disabled" : ""}>${hecha ? "✓" : "Listo"}</button>
     </div>`;
@@ -355,7 +381,10 @@ function pintarPorque(j) {
 }
 
 function alternar(id) {
-  document.getElementById("ej-" + id).classList.toggle("abierto");
+  const caja = document.getElementById("ej-" + id);
+  const abierto = caja.classList.toggle("abierto");
+  const cab = caja.querySelector(".ej-cab");
+  if (cab) cab.setAttribute("aria-expanded", abierto ? "true" : "false");
 }
 
 /**
@@ -366,6 +395,20 @@ function alternar(id) {
  * recuerda después cuántas repeticiones hizo en la tercera serie.
  */
 async function registrar(rutinaEjercicioId, ejercicioId, num, descansoSeg) {
+  const boton = document.getElementById(`b-${rutinaEjercicioId}-${num}`);
+
+  // El botón se bloquea ANTES de cualquier espera.
+  //
+  // Con `await` primero, entre el toque y el bloqueo había una ventana de
+  // milisegundos en la que un segundo toque —el gesto normal de alguien
+  // con guantes o con prisa— entraba otra vez y registraba la misma serie
+  // dos veces. El identificador local protege del reintento de red, pero
+  // no del dedo: cada toque acuña uno nuevo.
+  if (boton.disabled) return;
+  boton.disabled = true;
+  const textoPrevio = boton.textContent;
+
+  const fila = boton.closest(".serie-fila");
   const ej = rutina.ejercicios.find(e => e.id === rutinaEjercicioId);
   const esTiempo = ej.medida === "segundos" || ej.medida === "minutos";
 
@@ -374,26 +417,38 @@ async function registrar(rutinaEjercicioId, ejercicioId, num, descansoSeg) {
   const rpeCampo = document.getElementById(`e-${rutinaEjercicioId}-${num}`).value;
   const rpe = rpeCampo === "" ? null : Number(rpeCampo);
 
+  const devolverBoton = () => { boton.disabled = false; boton.textContent = textoPrevio; };
+
   if (!reps || reps < 1) {
-    alert(esTiempo ? "Anotá cuántos segundos sostuviste." : "Anotá cuántas repeticiones hiciste.");
+    avisarEnFila(fila, esTiempo ? "Anotá cuántos segundos sostuviste."
+                                : "Anotá cuántas repeticiones hiciste.");
+    devolverBoton();
     return;
   }
 
-  await Almacen.guardarSerie({
-    ejercicio_id: ejercicioId,
-    rutina_ejercicio_id: rutinaEjercicioId,
-    serie_num: num,
-    repeticiones: reps,
-    peso_kg: peso,
-    rpe
-  });
+  try {
+    await Almacen.guardarSerie({
+      ejercicio_id: ejercicioId,
+      rutina_ejercicio_id: rutinaEjercicioId,
+      serie_num: num,
+      repeticiones: reps,
+      peso_kg: peso,
+      rpe
+    });
+  } catch (err) {
+    // Si no se pudo guardar, hay que decirlo. Antes esto no tenía
+    // manejo: la persona tocaba, no pasaba nada, y no había explicación.
+    avisarEnFila(fila, err.invalida ? err.message
+      : "No se pudo guardar en este teléfono. Puede que no quede espacio. Probá de nuevo.");
+    devolverBoton();
+    return;
+  }
 
-  // Se marca en pantalla de inmediato: la confirmación no depende de que
-  // el servidor conteste.
-  const boton = document.getElementById(`b-${rutinaEjercicioId}-${num}`);
-  boton.classList.add("hecha"); boton.textContent = "✓"; boton.disabled = true;
-  boton.closest(".serie-fila").classList.add("hecha");
-  boton.closest(".serie-fila").querySelectorAll("input").forEach(i => i.disabled = true);
+  // Confirmado en pantalla: no depende de que el servidor conteste.
+  boton.classList.add("hecha"); boton.textContent = "✓";
+  fila.classList.add("hecha");
+  fila.querySelectorAll("input").forEach(i => i.disabled = true);
+  quitarAvisoDeFila(fila);
 
   ej.realizadas = ej.realizadas || [];
   ej.realizadas.push({ serie_num: num, repeticiones: reps, peso_kg: peso, rpe });
@@ -406,8 +461,33 @@ async function registrar(rutinaEjercicioId, ejercicioId, num, descansoSeg) {
   if (descansoSeg > 0) abrirDescanso(descansoSeg);
 }
 
+/** Mensaje junto a la serie, en vez de un alert que tapa la pantalla. */
+function avisarEnFila(fila, texto) {
+  quitarAvisoDeFila(fila);
+  const aviso = document.createElement("div");
+  aviso.className = "aviso-fila";
+  aviso.setAttribute("role", "alert");
+  aviso.textContent = texto;
+  fila.insertAdjacentElement("afterend", aviso);
+  setTimeout(() => aviso.remove(), 7000);
+}
+
+function quitarAvisoDeFila(fila) {
+  const siguiente = fila.nextElementSibling;
+  if (siguiente && siguiente.classList.contains("aviso-fila")) siguiente.remove();
+}
+
 /* ── Cronómetro de descanso ───────────────────────────────────────── */
 let temporizador = null, restante = 0;
+
+// El cronómetro tapa la pantalla entera durante uno a tres minutos. Sin
+// una salida por teclado, alguien que quiere corregir una repetición mal
+// tecleada queda encerrado esperando.
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("descanso").classList.contains("visible")) {
+    cerrarDescanso();
+  }
+});
 
 function abrirDescanso(segundos) {
   restante = segundos;
@@ -445,7 +525,13 @@ async function terminar() {
     mostrarNivel();
   } catch (err) {
     if (err.sinRed) {
+      // Se recuerda la intención y se reintenta cuando vuelva la señal.
+      // Antes el botón decía que se marcaría y no había ninguna cola
+      // detrás: la sesión quedaba pendiente para siempre, y con ella los
+      // puntos, la racha y la constancia.
+      await Almacen.guardarDato("rutina_por_completar", rutina.id).catch(() => {});
       btn.textContent = "Se marcará al recuperar señal";
+      btn.disabled = false;
       return;
     }
     btn.disabled = false; btn.textContent = "Terminar sesión";

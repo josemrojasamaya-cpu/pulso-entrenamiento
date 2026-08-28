@@ -14,7 +14,12 @@
   --gr-400:#7d8b99;    --gr-300:#9dabb8;    --gr-200:#c3ced8;
   --gr-100:#e4eaf0;
 
-  --tx:#e8eef4;        --tx2:#9dabb8;       --tx3:#6c7a88;
+  /* --tx3 era #6c7a88: 4,28:1 sobre el fondo y 3,77:1 sobre las
+     tarjetas, por debajo del 4,5:1 que exige el nivel AA. Se usa en el
+     texto chico —el subtítulo de cada ejercicio, las etiquetas de los
+     gráficos, las pestañas inactivas—, que es justo lo que hay que leer
+     en un gimnasio, a contraluz y con el brillo bajo. */
+  --tx:#e8eef4;        --tx2:#9dabb8;       --tx3:#8b99a7;
   --bg:#0e1216;        --sup:#181f28;       --sup-2:#1e2732;
   --borde:#2a3541;
 
@@ -253,6 +258,25 @@ tr.clic:hover td{background:var(--gr-750)}
 }
 .sin-red.visible{display:flex}
 .punto-alerta{width:7px; height:7px; border-radius:50%; background:var(--alerta)}
+
+/* Series que el servidor no aceptó: exige que la persona haga algo, así
+   que se distingue del aviso de "sin conexión", que no exige nada. */
+.sin-red.problema{
+  background:var(--mal-tenue); border-color:#5a2a28; color:#eda6a3; cursor:pointer;
+}
+.sin-red.problema .punto-alerta{background:var(--mal)}
+
+/* Aviso junto a la serie que falló, en lugar de un cuadro de diálogo que
+   tapa la pantalla entre serie y serie. */
+.aviso-fila{
+  grid-column:1 / -1; margin:-2px 0 6px;
+  padding:8px 11px; border-radius:8px; font-size:12.5px; line-height:1.45;
+  background:var(--mal-tenue); border:1px solid #4a2523; color:#eda6a3;
+}
+
+/* Foco visible: sin esto, quien navega con teclado no sabe dónde está. */
+:focus-visible{outline:2px solid var(--az); outline-offset:2px; border-radius:6px}
+.ej-cab:focus-visible{outline-offset:-2px}
 
 @media(max-width:600px){
   .top-in{padding:0 14px}

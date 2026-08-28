@@ -214,11 +214,28 @@ function pintarLimites(l) {
   </div>`;
 }
 
+/**
+ * Envuelve una acción para que no se pueda disparar dos veces seguidas.
+ * El botón queda bloqueado y avisa mientras la petición está en curso.
+ */
+async function unaVez(selector, textoOcupado, accion) {
+  const boton = document.querySelector(selector);
+  if (boton && boton.disabled) return;
+  const previo = boton ? boton.textContent : null;
+  if (boton) { boton.disabled = true; boton.textContent = textoOcupado; }
+  try { await accion(); }
+  finally { if (boton) { boton.disabled = false; boton.textContent = previo; } }
+}
+
 function marcados(contenedor) {
   return [...document.querySelectorAll(`#${contenedor} input:checked`)].map(i => i.value);
 }
 
-async function guardarPerfil() {
+function guardarPerfil() {
+  return unaVez("#contenido .tarjeta .btn.grande", "Guardando…", guardarPerfilAhora);
+}
+
+async function guardarPerfilAhora() {
   const equipo = marcados("fichas-equipo");
   if (equipo.length === 0) {
     document.getElementById("msg-perfil").innerHTML =
@@ -246,7 +263,11 @@ async function guardarPerfil() {
   }
 }
 
-async function guardarCondiciones() {
+function guardarCondiciones() {
+  return unaVez("#msg-cond", "Guardando…", guardarCondicionesAhora);
+}
+
+async function guardarCondicionesAhora() {
   try {
     const r = await api(`/atleta/${usuario.id}/condiciones`, {
       method:"PUT", body: { condiciones: marcados("fichas-cond") }
@@ -309,7 +330,11 @@ function pintarDescripcion() {
   document.getElementById("modelo-desc").textContent = m ? m.descripcion : "";
 }
 
-async function iniciarBloque() {
+function iniciarBloque() {
+  return unaVez("#msg-bloque", "Iniciando…", iniciarBloqueAhora);
+}
+
+async function iniciarBloqueAhora() {
   try {
     const r = await api(`/atleta/${usuario.id}/mesociclo`, {
       method: "POST", body: { modelo: document.getElementById("p-modelo").value }

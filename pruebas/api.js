@@ -251,6 +251,49 @@ const { restricciones, esApto, CONDICIONES } = require("../lib/salud");
         check(`fecha "${f}" responde ${esperado}`, r.status === esperado, `dio ${r.status}`);
     }
 
+    seccion("CICLO DE UNA SESIÓN");
+
+    // Esta sección existe porque el botón "Terminar sesión" nunca
+    // funcionó: la consulta usaba el mismo parámetro en tres contextos y
+    // PostgreSQL la rechazaba entera con un 500. Dos auditorías lo
+    // pasaron por alto porque las dos probaron esa ruta con la red
+    // caída, y ninguna suite recorría el ciclo completo.
+    {
+        const hoy = await pedir(`/api/entrenamiento/dia/${dia(0)}`, token);
+        const rutinaId = hoy.d.rutina && hoy.d.rutina.id;
+        check("hay una rutina para hoy", Boolean(rutinaId));
+
+        for (const estado of ["en_curso", "completada"]) {
+            const r = await pedir(`/api/entrenamiento/rutina/${rutinaId}/estado`, token, {
+                method: "POST", body: { estado }
+            });
+            check(`marcar la sesión como "${estado}" responde 200`,
+                  r.status === 200, `dio ${r.status}: ${r.d.message || ""}`);
+        }
+
+        const tras = await pedir(`/api/entrenamiento/dia/${dia(0)}`, token);
+        check("el estado quedó guardado como completada",
+              tras.d.rutina.estado === "completada", `quedó "${tras.d.rutina.estado}"`);
+        check("y se registró la hora de cierre", Boolean(tras.d.rutina.terminada_en));
+
+        const invalido = await pedir(`/api/entrenamiento/rutina/${rutinaId}/estado`, token, {
+            method: "POST", body: { estado: "inventado" }
+        });
+        check("un estado inventado se rechaza", invalido.status === 400, `dio ${invalido.status}`);
+
+        const ajeno = await pedir(`/api/entrenamiento/rutina/999999/estado`, token, {
+            method: "POST", body: { estado: "completada" } });
+        check("una rutina inexistente responde 404", ajeno.status === 404, `dio ${ajeno.status}`);
+
+        // Volver a marcarla completada no debe otorgar puntos otra vez.
+        const antes = (await pedir(`/api/progreso/${id}/resumen`, token)).d.nivel.puntos;
+        await pedir(`/api/entrenamiento/rutina/${rutinaId}/estado`, token, {
+            method: "POST", body: { estado: "completada" } });
+        const despues = (await pedir(`/api/progreso/${id}/resumen`, token)).d.nivel.puntos;
+        check("completar dos veces no duplica los puntos",
+              antes === despues, `${antes} → ${despues}`);
+    }
+
     seccion("PERMISOS");
 
     const otro = await login("hipertenso");

@@ -689,11 +689,21 @@ router.post("/rutina/:id/estado", async (req, res) => {
             return res.status(404).json({ message: "Rutina no encontrada." });
         }
 
+        // Los `::varchar` no son decoración: el mismo parámetro se usa en
+        // tres contextos distintos y PostgreSQL no logra deducir un tipo
+        // único, así que rechazaba la consulta entera con "se dedujeron
+        // tipos de dato inconsistentes". Marcar una sesión como completada
+        // devolvía 500 SIEMPRE, y con ella se perdían los puntos, la racha
+        // y la constancia — las tres cosas sobre las que se construye el
+        // ranking. Ninguna de las dos auditorías lo vio porque las dos
+        // probaron esta ruta con la red caída.
         await pool.query(
-            `UPDATE rutinas SET estado = $1,
-                    iniciada_en  = COALESCE(iniciada_en, CASE WHEN $1 = 'en_curso' THEN NOW() END),
-                    terminada_en = CASE WHEN $1 = 'completada' THEN NOW() ELSE terminada_en END
-              WHERE id = $2`,
+            `UPDATE rutinas SET estado = $1::varchar,
+                    iniciada_en  = COALESCE(iniciada_en,
+                                     CASE WHEN $1::varchar = 'en_curso' THEN NOW() END),
+                    terminada_en = CASE WHEN $1::varchar = 'completada' THEN NOW()
+                                        ELSE terminada_en END
+              WHERE id = $2::int`,
             [estado, id]
         );
 

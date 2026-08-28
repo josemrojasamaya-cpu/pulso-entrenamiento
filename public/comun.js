@@ -18,10 +18,27 @@ const Sesion = {
     try { return JSON.parse(localStorage.getItem("forja_usuario") || "null"); }
     catch { return null; }
   },
+  /**
+   * Cierra la sesión limpiando lo que es personal.
+   *
+   * Las series sin enviar NO se borran: son trabajo real que nadie puede
+   * reconstruir. Quedan atadas a su dueño y salen cuando esa persona
+   * vuelva a entrar. Si hay alguna, se avisa antes: en un teléfono
+   * compartido, cerrar sesión sin señal es exactamente el momento en que
+   * se perderían.
+   */
   async cerrar() {
-    // Los datos guardados en el teléfono son personales: al cerrar
-    // sesión se borran, no basta con quitar el token.
-    if (window.Almacen) await Almacen.vaciar().catch(() => {});
+    if (window.Almacen) {
+      const pendientes = await Almacen.cerrarSesion().catch(() => 0);
+      if (pendientes > 0) {
+        const seguir = confirm(
+          `Tenés ${pendientes} serie${pendientes === 1 ? "" : "s"} sin enviar al servidor.\n\n` +
+          "Quedan guardadas en este teléfono y se envían solas cuando vuelvas a entrar " +
+          "con tu cuenta. ¿Cerrar sesión igual?"
+        );
+        if (!seguir) return;
+      }
+    }
     localStorage.removeItem("forja_token");
     localStorage.removeItem("forja_usuario");
     location.href = "login.html";
@@ -239,25 +256,77 @@ function vigilarConexion() {
   }
 
   async function refrescar() {
-    const pendientes = window.Almacen ? await Almacen.cuantasPendientes().catch(() => 0) : 0;
+    if (!window.Almacen) { barra.classList.remove("visible"); return; }
+
+    const pendientes = await Almacen.cuantasPendientes().catch(() => 0);
+    const rechazadas = await Almacen.rechazadas().catch(() => []);
+
+    // Lo rechazado va primero: es lo único que exige que la persona
+    // haga algo. Antes se borraba en silencio y nadie se enteraba.
+    if (rechazadas.length > 0) {
+      barra.className = "sin-red visible problema";
+      barra.innerHTML =
+        `<span class="punto-alerta"></span> ${rechazadas.length} ` +
+        `serie${rechazadas.length === 1 ? "" : "s"} sin guardar · tocá para revisar`;
+      barra.onclick = () => mostrarRechazadas(rechazadas);
+      return;
+    }
+
+    barra.onclick = null;
+    barra.className = "sin-red";
 
     if (!navigator.onLine) {
       barra.innerHTML = `<span class="punto-alerta"></span> Sin conexión` +
-        (pendientes ? ` · ${pendientes} serie${pendientes === 1 ? "" : "s"} en espera` : " · podés seguir entrenando");
+        (pendientes ? ` · ${pendientes} serie${pendientes === 1 ? "" : "s"} en espera`
+                    : " · podés seguir entrenando");
       barra.classList.add("visible");
     } else if (pendientes > 0) {
-      barra.innerHTML = `<span class="punto-alerta"></span> Sincronizando ${pendientes}…`;
+      barra.innerHTML = `<span class="punto-alerta"></span> Enviando ${pendientes}…`;
       barra.classList.add("visible");
     } else {
       barra.classList.remove("visible");
     }
   }
 
-  window.addEventListener("online", refrescar);
+  /**
+   * Reintento periódico.
+   *
+   * Los eventos `online` y `visibilitychange` no cubren el caso más
+   * común: la wifi sigue asociada y lo que se cayó fue el enlace, así
+   * que el navegador nunca dice que volvió la conexión. Sin este
+   * intervalo, nada salía del teléfono mientras la persona siguiera
+   * mirando la misma pantalla.
+   */
+  async function latido() {
+    if (navigator.onLine && window.Almacen) {
+      const r = await Almacen.sincronizar().catch(() => null);
+      if (r && (r.enviadas > 0 || r.rechazadas > 0)) await refrescar();
+    }
+    await refrescar();
+  }
+
+  window.addEventListener("online", latido);
   window.addEventListener("offline", refrescar);
   window.alSincronizar = refrescar;
-  setInterval(refrescar, 6000);
-  refrescar();
+  setInterval(latido, 15000);
+  latido();
+}
+
+/** Lista las series que el servidor no aceptó, con su motivo. */
+async function mostrarRechazadas(lista) {
+  const detalle = lista.map(s =>
+    `· ${s.repeticiones} repeticiones` + (s.peso_kg ? ` con ${s.peso_kg} kg` : "") +
+    `\n  ${s.motivo_rechazo || "el servidor no la aceptó"}`
+  ).join("\n\n");
+
+  const borrar = confirm(
+    `Estas series no se pudieron guardar:\n\n${detalle}\n\n` +
+    "Anotalas de nuevo con los valores correctos.\n\n¿Descartarlas de la lista?"
+  );
+  if (borrar) {
+    for (const s of lista) await Almacen.descartar(s.id_local).catch(() => {});
+    if (typeof window.alSincronizar === "function") window.alSincronizar();
+  }
 }
 
 /* ── Service worker ───────────────────────────────────────────────── */
