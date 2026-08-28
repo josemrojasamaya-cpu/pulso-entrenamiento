@@ -70,6 +70,7 @@ async function cargar() {
 
 function pintar(limites) {
   const equipo = Array.isArray(perfil.equipo) ? perfil.equipo : ["peso_corporal"];
+  const equipoCasa = Array.isArray(perfil.equipo_casa) ? perfil.equipo_casa : ["peso_corporal"];
 
   document.getElementById("contenido").innerHTML = `
     <div class="tarjeta" style="margin-bottom:16px"><div class="t-cu">
@@ -109,12 +110,28 @@ function pintar(limites) {
       </div>
 
       <div class="seccion">
-        <h2>Qué equipo tenés a mano</h2>
+        <h2>Qué equipo tenés en el gimnasio</h2>
         <p class="ayuda">Sólo se van a proponer ejercicios que puedas hacer de verdad. Marcar equipo que no tenés es la forma más rápida de terminar con una rutina inservible.</p>
         <div class="fichas" id="fichas-equipo">
           ${EQUIPOS.map(([v,t]) => `
             <label class="ficha ${equipo.includes(v)?"on":""}">
               <input type="checkbox" value="${v}" ${equipo.includes(v)?"checked":""}
+                     onchange="this.closest('.ficha').classList.toggle('on', this.checked)">
+              ${t}
+            </label>`).join("")}
+        </div>
+      </div>
+
+      <div class="seccion">
+        <h2>Y qué tenés en casa</h2>
+        <p class="ayuda">
+          El día que no puedas ir al gimnasio, la sesión se rehace con esto. Aunque sólo
+          marques el peso corporal ya alcanza: hay 49 ejercicios que no necesitan nada.
+        </p>
+        <div class="fichas" id="fichas-casa">
+          ${EQUIPOS.map(([v,t]) => `
+            <label class="ficha ${equipoCasa.includes(v)?"on":""}">
+              <input type="checkbox" value="${v}" ${equipoCasa.includes(v)?"checked":""}
                      onchange="this.closest('.ficha').classList.toggle('on', this.checked)">
               ${t}
             </label>`).join("")}
@@ -243,7 +260,11 @@ async function guardarPerfilAhora() {
     return;
   }
 
+  const equipoCasa = marcados("fichas-casa");
+  if (equipoCasa.length === 0) equipoCasa.push("peso_corporal");
+
   const cuerpo = {
+    equipo_casa: equipoCasa,
     objetivo: document.getElementById("p-objetivo").value,
     nivel: document.getElementById("p-nivel").value,
     dias_por_semana: Number(document.getElementById("p-dias").value),
