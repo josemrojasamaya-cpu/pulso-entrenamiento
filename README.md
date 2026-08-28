@@ -133,13 +133,41 @@ catálogo y los datos de ejemplo solo. En planes sin acceso a consola es la
 ## Pruebas
 
 ```bash
-node pruebas/motor.js
+node pruebas/motor.js                                    # 46, sin base de datos
+URL_BASE=http://localhost:3000 node pruebas/api.js       # 17, contra el servidor vivo
 ```
 
-46 comprobaciones sobre el motor, sin necesidad de base de datos. Cubren
-seguridad clínica, reproducibilidad, cobertura de patrones en sesiones
-cortas, unidades por tipo de ejercicio, cálculo de cargas y robustez ante
-entradas absurdas.
+**63 comprobaciones**, y la historia de por qué son dos suites vale más que
+el número.
+
+`motor.js` prueba el generador en memoria: seguridad clínica,
+reproducibilidad, cobertura de patrones en sesiones cortas, unidades,
+cálculo de cargas, robustez ante entradas absurdas.
+
+Pero su prueba central era **tautológica**, y una auditoría externa lo
+demostró: comprobaba que ningún ejercicio cuyo `contraindicado_en`
+incluyera el código fuera propuesto — que es exactamente el predicado que
+implementa el filtro. Pasaba por construcción, y era ciega a tres fugas
+reales: una restricción que se calculaba y nunca se aplicaba, un descanso
+mínimo que otro cálculo pisaba, y rutinas guardadas antes de declarar una
+condición que se seguían sirviendo sin revisar.
+
+`api.js` la reemplaza por una **invariante** contra el servidor vivo:
+
+> Para toda condición, toda severidad, todo perfil y todo día, ninguna de
+> las rutinas **servidas por la API** viola ninguna de las ocho dimensiones
+> de `restricciones()`.
+
+Son 352 rutinas revisadas contra contraindicaciones, impacto, decúbito
+supino, patrones excluidos, exigencia sistémica, descanso mínimo, rango de
+repeticiones y el veredicto de `esApto`. Esa invariante encontró un defecto
+más que la auditoría no había visto: el motor asignaba una unidad al
+ejercicio y la persistencia la descartaba.
+
+La lección, que vale para cualquier sistema: **una prueba escrita contra la
+misma tabla que usa el código no prueba nada.** La que sirve es la que
+afirma una propiedad del sistema entero y la evalúa sobre lo que el usuario
+realmente recibe.
 
 ## Sobre los videos
 
