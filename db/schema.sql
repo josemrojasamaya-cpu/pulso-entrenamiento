@@ -695,17 +695,31 @@ CREATE INDEX IF NOT EXISTS idx_canjes_usuario ON canjes (usuario_id);
 
 -- Los tres primeros probadores. Tres meses completos cada uno, un uso
 -- por código: así se sabe cuál de los tres entró y cuándo.
+-- Los códigos llevan letras y números mezclados a propósito.
+--
+-- Uno como PULSO-FUNDADOR-1 se ve de juguete y, peor, se adivina: quien
+-- reciba el 1 prueba el 2 y el 3 en diez segundos y se queda con los
+-- tres. Estos no se pueden deducir de otro.
+--
+-- El grupo del medio identifica para quién es cada uno, sin decirlo en
+-- voz alta: quien lo recibe ve un código, y de este lado se sabe cuál
+-- es cuál mirando la nota.
 INSERT INTO cupones (codigo, plan, meses, usos_max, nota) VALUES
-    ('PULSO-FUNDADOR-1', 'completo', 3, 1, 'Primera persona que prueba'),
-    ('PULSO-FUNDADOR-2', 'completo', 3, 1, 'Segunda persona que prueba'),
-    ('PULSO-FUNDADOR-3', 'completo', 3, 1, 'Tercera persona que prueba'),
-    ('PULSO-FUNDADOR-4', 'completo', 3, 1, 'Reserva'),
-    ('PULSO-FUNDADOR-5', 'completo', 3, 1, 'Reserva'),
-    ('PULSO-FUNDADOR-6', 'completo', 3, 1, 'Reserva'),
-    -- Para enseñar la aplicación a alguien en el momento, sin gastar uno
-    -- de los de arriba. Un mes, y lo pueden usar veinte personas.
-    ('PULSO-PRUEBA', 'completo', 1, 20, 'Demostración rápida')
+    ('PLS-K7RM-2XQ4', 'completo', 3, 1, 'Fundador 1'),
+    ('PLS-V3TB-9HNZ', 'completo', 3, 1, 'Fundador 2'),
+    ('PLS-D8FW-5JCR', 'completo', 3, 1, 'Fundador 3'),
+    ('PLS-Q2NX-7MKD', 'completo', 3, 1, 'Reserva 4'),
+    ('PLS-H6ZL-4PBV', 'completo', 3, 1, 'Reserva 5'),
+    ('PLS-T9GY-8WSF', 'completo', 3, 1, 'Reserva 6'),
+    -- Para enseñar la aplicación a alguien en el momento sin gastar uno
+    -- de los nominales. Un mes, hasta veinte personas.
+    ('PLS-DEMO-2026', 'completo', 1, 20, 'Demostración rápida')
 ON CONFLICT (codigo) DO NOTHING;
+
+-- Los códigos viejos, que ya se repartieron a nadie, se retiran para que
+-- no queden dos juegos válidos dando vueltas.
+UPDATE cupones SET activo = FALSE WHERE codigo LIKE 'PULSO-FUNDADOR-%'
+   AND usos = 0;
 
 -- El canje del cupón 3 hecho al verificar el despliegue se deshace: ese
 -- código es para una persona de verdad, no para una prueba.
