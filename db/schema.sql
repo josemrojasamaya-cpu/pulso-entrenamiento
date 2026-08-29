@@ -698,5 +698,25 @@ CREATE INDEX IF NOT EXISTS idx_canjes_usuario ON canjes (usuario_id);
 INSERT INTO cupones (codigo, plan, meses, usos_max, nota) VALUES
     ('PULSO-FUNDADOR-1', 'completo', 3, 1, 'Primera persona que prueba'),
     ('PULSO-FUNDADOR-2', 'completo', 3, 1, 'Segunda persona que prueba'),
-    ('PULSO-FUNDADOR-3', 'completo', 3, 1, 'Tercera persona que prueba')
+    ('PULSO-FUNDADOR-3', 'completo', 3, 1, 'Tercera persona que prueba'),
+    ('PULSO-FUNDADOR-4', 'completo', 3, 1, 'Reserva'),
+    ('PULSO-FUNDADOR-5', 'completo', 3, 1, 'Reserva'),
+    ('PULSO-FUNDADOR-6', 'completo', 3, 1, 'Reserva'),
+    -- Para enseñar la aplicación a alguien en el momento, sin gastar uno
+    -- de los de arriba. Un mes, y lo pueden usar veinte personas.
+    ('PULSO-PRUEBA', 'completo', 1, 20, 'Demostración rápida')
 ON CONFLICT (codigo) DO NOTHING;
+
+-- El canje del cupón 3 hecho al verificar el despliegue se deshace: ese
+-- código es para una persona de verdad, no para una prueba.
+--
+-- Va acá y no como una corrección manual en la base porque el esquema
+-- tiene que poder ejecutarse en limpio y dejar el mismo resultado. Una
+-- corrección hecha a mano en producción se pierde en el próximo
+-- despliegue desde cero, y nadie se acuerda de por qué faltaba.
+DELETE FROM canjes WHERE codigo = 'PULSO-FUNDADOR-3'
+   AND usuario_id IN (SELECT id FROM usuarios WHERE username = 'atleta');
+UPDATE cupones SET usos = (SELECT COUNT(*) FROM canjes WHERE canjes.codigo = cupones.codigo)
+ WHERE codigo LIKE 'PULSO-%';
+UPDATE usuarios SET plan = 'gratis', plan_vence = NULL
+ WHERE username = 'atleta' AND plan_vence IS NOT NULL;
