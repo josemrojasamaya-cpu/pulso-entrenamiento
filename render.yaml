@@ -12,7 +12,7 @@ services:
     # setup.js crea las tablas si faltan y no toca las que ya existen.
     # Va en el arranque y no en la construcción, porque en Render la base
     # todavía no está enlazada durante el build.
-    startCommand: node db/setup.js && npm start
+    startCommand: node db/arranque.js
     healthCheckPath: /login.html
     envVars:
       - key: DATABASE_URL
