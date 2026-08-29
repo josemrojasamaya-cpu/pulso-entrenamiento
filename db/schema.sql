@@ -654,3 +654,49 @@ CREATE TABLE IF NOT EXISTS recorridos (
     puntos       JSONB NOT NULL,
     n_puntos     INTEGER NOT NULL DEFAULT 0
 );
+
+
+-- ---------------------------------------------------------------------
+--  Cupones · acceso de pago sin cobrar
+--
+--  Para las primeras personas que prueban la aplicación, para regalar
+--  meses, y para campañas.
+--
+--  Un cupón NO es un descuento sobre un cobro: es un plan concedido
+--  directamente. Mientras no haya pasarela de pagos conectada, es la
+--  única forma de que alguien tenga el plan completo, y cuando la haya
+--  seguirá sirviendo igual.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS cupones (
+    codigo       VARCHAR(24) PRIMARY KEY,
+    plan         VARCHAR(20) NOT NULL DEFAULT 'completo',
+    meses        INTEGER NOT NULL DEFAULT 1,
+    -- Cuántas personas pueden usarlo. NULL es ilimitado, para campañas.
+    usos_max     INTEGER,
+    usos         INTEGER NOT NULL DEFAULT 0,
+    vence        DATE,
+    nota         VARCHAR(200),
+    activo       BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Quién usó cada cupón. Sin esto no se puede saber si una campaña
+-- funcionó, y una misma persona podría canjear el mismo código cada mes
+-- para siempre.
+CREATE TABLE IF NOT EXISTS canjes (
+    id           BIGSERIAL PRIMARY KEY,
+    codigo       VARCHAR(24) NOT NULL REFERENCES cupones(codigo) ON DELETE CASCADE,
+    usuario_id   INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    canjeado_en  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (codigo, usuario_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_canjes_usuario ON canjes (usuario_id);
+
+-- Los tres primeros probadores. Tres meses completos cada uno, un uso
+-- por código: así se sabe cuál de los tres entró y cuándo.
+INSERT INTO cupones (codigo, plan, meses, usos_max, nota) VALUES
+    ('PULSO-FUNDADOR-1', 'completo', 3, 1, 'Primera persona que prueba'),
+    ('PULSO-FUNDADOR-2', 'completo', 3, 1, 'Segunda persona que prueba'),
+    ('PULSO-FUNDADOR-3', 'completo', 3, 1, 'Tercera persona que prueba')
+ON CONFLICT (codigo) DO NOTHING;
