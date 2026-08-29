@@ -257,7 +257,11 @@ document.addEventListener("visibilitychange", () => {
 async function arrancar() {
   try {
     const p = await api("/entrenamiento/paquete?dias=1");
-    rutina = p.dias && p.dias[0] ? p.dias[0] : null;
+    // El paquete devuelve "rutinas", no "dias". Escribí "dias" acá y la
+    // maqueta local respondía con ese nombre, así que la pantalla se veía
+    // bien mientras el servidor de verdad no le daba nada. Es el peligro
+    // exacto de probar contra datos inventados: confirman lo que uno cree.
+    rutina = p.rutinas && p.rutinas[0] ? p.rutinas[0] : null;
   } catch (err) {
     document.getElementById("cuerpo").innerHTML =
       `<div class="aviso mal">${esc(err.message)}</div>`;
