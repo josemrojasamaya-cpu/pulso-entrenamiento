@@ -13,7 +13,6 @@ services:
     # Va en el arranque y no en la construcción, porque en Render la base
     # todavía no está enlazada durante el build.
     startCommand: node db/arranque.js
-    healthCheckPath: /login.html
     envVars:
       - key: DATABASE_URL
         fromDatabase:

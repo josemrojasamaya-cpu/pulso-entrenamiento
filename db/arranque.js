@@ -1,25 +1,31 @@
 /**
- * db/arranque.js — prepara la base y levanta el servidor.
+ * db/arranque.js — abre el puerto primero, prepara la base después.
  *
- * Antes el arranque en Render era `node db/setup.js && npm start`, y ese
- * `&&` tenía dos problemas que en local no se ven:
+ * El orden importa y es la causa de que los dos despliegues anteriores
+ * fallaran.
  *
- *   1. Si la base todavía no acepta conexiones —normal los primeros
- *      segundos de un despliegue nuevo, o cuando despierta— setup.js
- *      falla, el `&&` corta, y el servicio muere entero. Sin servidor no
- *      hay a dónde entrar a mirar qué pasó.
+ * Render vigila que el servicio abra su puerto en los primeros segundos.
+ * Si no lo ve, lo mata con "no open ports detected" y marca el
+ * despliegue como fallido. Pero setup.js no solo crea tablas: siembra
+ * meses de historial de ejemplo, y eso tarda. Con el arranque anterior
+ * -esperar a la base, preparar, y recién entonces escuchar- el servidor
+ * pasaba ese rato sin puerto abierto y Render lo daba por muerto antes
+ * de que llegara a servir nada.
  *
- *   2. Cuando muere así, lo único que queda es el registro de un proceso
- *      que ya terminó. Diagnosticar a ciegas es mucho más caro que
- *      dejar el servidor en pie diciendo qué le falta.
+ * Acá se escucha PRIMERO. La preparación corre después, en segundo
+ * plano, y si tarda un minuto no le importa a nadie: el puerto ya está
+ * abierto y la pantalla de acceso ya responde.
  *
- * Acá se espera a que la base responda, se prepara, y si algo sale mal
- * el servidor arranca IGUAL: sirve la aplicación y deja el error en el
- * registro, donde se puede leer.
+ * Lo que se pierde: durante esos segundos, quien entre va a ver errores
+ * de datos. Es mucho mejor que un servicio que nunca arranca.
  */
+
+// Esto abre el puerto de inmediato: app.js llama a listen() al cargarse.
+require("../app");
+
 const pool = require("../config/db");
 
-const INTENTOS = 10;
+const INTENTOS = 20;
 const ESPERA_MS = 3000;
 
 async function esperarBase() {
@@ -36,26 +42,19 @@ async function esperarBase() {
     return false;
 }
 
-async function arrancar() {
-    const viva = await esperarBase();
-
-    if (viva) {
-        try {
-            // setup.js es idempotente: crea lo que falta y no toca lo que
-            // ya está. Correrlo en cada arranque es seguro y mantiene el
-            // esquema al día sin un paso manual después de cada despliegue.
-            await require("./setup").main({ cerrarPool: false });
-            console.log("[ARRANQUE] esquema al día");
-        } catch (err) {
-            console.error("[ARRANQUE] la preparación de la base falló:", err.message);
-            console.error("[ARRANQUE] el servidor arranca igual; revisá este error.");
-        }
-    } else {
-        console.error("[ARRANQUE] la base nunca respondió. El servidor arranca, " +
-                      "pero todo lo que necesite datos va a fallar.");
+(async () => {
+    if (!await esperarBase()) {
+        console.error("[ARRANQUE] la base nunca respondió en un minuto. " +
+                      "El servidor sigue en pie, pero todo lo que necesite datos va a fallar.");
+        return;
     }
 
-    require("../app");
-}
-
-arrancar();
+    try {
+        // Idempotente: crea lo que falta y no toca lo que ya está.
+        await require("./setup").main({ cerrarPool: false });
+        console.log("[ARRANQUE] esquema y datos al día");
+    } catch (err) {
+        console.error("[ARRANQUE] la preparación de la base falló:", err.message);
+        console.error("[ARRANQUE] el servidor sigue en pie; revisá este error.");
+    }
+})();
