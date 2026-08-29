@@ -7,6 +7,30 @@
    ===================================================================== */
 
 :root{
+  /* Variantes de la paleta.
+     Estas se estaban usando en las pantallas nuevas sin existir acá, y
+     una variable inexistente en CSS no da error: simplemente no pinta
+     nada. Un fondo quedaba transparente y dejaba ver la pantalla de
+     atrás. Nombradas de una vez para que no vuelva a pasar. */
+  --ac:#d8973c;            /* acento: puntos, logros, celebración */
+  --adv:#d8973c;           /* advertencia, mismo tono que alerta */
+  --adv-tenue:#2e2413;
+  --adv-3:#4a3a1c;
+  --ok-tenue:#122b21;
+  --ok-3:#1d4536;
+  --mal-tenue:#2c1616;
+  --mal-3:#4a2422;
+  --alerta-tenue:#2e2413;
+  --az-2:#2b74c4;
+  --az-3:#2a4c74;
+  --gr-950:#080c12;
+  --gr-875:#141b23;
+  --gr-800:#171e26;
+  --gr-850:#131920;
+  --tx2:#a8b6c4;
+  --tx3:#7d8b99;
+  --sup:#131920;
+
   --az:#3d7fd6;        --az-2:#2c62aa;      --az-3:#1b3c6b;
   --az-tenue:#16263c;
   --gr-900:#0e1216;    --gr-850:#131920;    --gr-800:#181f28;

@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="estilos.css">
+<link rel="stylesheet" href="lib/leaflet.css">
 <style>
 .deportes{display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:9px}
 .dep{
@@ -26,7 +27,12 @@
 
 /* Registro en vivo */
 .vivo-act{
-  position:fixed; inset:0; z-index:60; background:var(--gr-950);
+  position:fixed; inset:0; z-index:60;
+  /* Color literal y no una variable: --gr-950 no existe en la hoja de
+     estilos, y una variable inexistente deja el fondo TRANSPARENTE. El
+     panel parecía estar encima y se veía el catálogo de deportes a
+     través de él. Un fallo que sólo se ve mirando la pantalla. */
+  background:#080c12;
   display:none; flex-direction:column;
   padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
 }
@@ -69,15 +75,37 @@
   background:var(--gr-850); color:var(--tx2); font:inherit; font-size:13.5px;
   font-weight:600; cursor:pointer}
 
-/* Mapa: el recorrido dibujado con los propios puntos */
+/* Mapa real sobre OpenStreetMap */
 .mapa{
   width:100%; aspect-ratio:4/3; background:var(--gr-900); border-radius:13px;
-  border:1px solid var(--borde); overflow:hidden; position:relative;
+  border:1px solid var(--borde); overflow:hidden; position:relative; z-index:0;
 }
-.mapa svg{width:100%; height:100%; display:block}
-.mapa .escala{
-  position:absolute; left:10px; bottom:10px; font-size:10.5px; color:var(--tx3);
-  background:rgba(6,10,16,.75); padding:3px 8px; border-radius:6px;
+.mapa-vivo{
+  width:100%; flex:1; min-height:210px; border-radius:14px; overflow:hidden;
+  border:1px solid var(--borde); position:relative; z-index:0;
+}
+/* Con mapa, el cuerpo deja de centrar su contenido y reparte el alto:
+   el mapa se queda con todo lo que sobra. Sin mapa -natación, boxeo- el
+   centrado de antes sigue siendo lo correcto. */
+.va-cuerpo.con-mapa{justify-content:flex-start; gap:14px; padding-bottom:10px}
+.va-cuerpo.con-mapa .va-datos{margin:0}
+.va-cuerpo.con-mapa .va-reloj{margin:0}
+/* Las teselas vienen claras y la aplicación es oscura. Un filtro las
+   invierte y les baja el brillo: quedan legibles de noche, que es
+   cuando más se sale a correr, y no encandilan. */
+.leaflet-tile-pane{
+  filter:invert(1) hue-rotate(185deg) brightness(.92) contrast(.88) saturate(.7);
+}
+.leaflet-container{background:var(--gr-900); font:inherit}
+.leaflet-control-attribution{
+  background:rgba(6,10,16,.72) !important; color:var(--tx3) !important; font-size:9.5px !important;
+}
+.leaflet-control-attribution a{color:var(--tx2) !important}
+.b-centrar{
+  position:absolute; right:10px; bottom:10px; z-index:500;
+  width:38px; height:38px; border-radius:50%; border:1px solid var(--borde);
+  background:rgba(14,22,32,.9); color:var(--az); cursor:pointer; font-size:16px;
+  display:grid; place-items:center;
 }
 
 /* Historial */
@@ -139,15 +167,17 @@
     <span class="va-gps buscando" id="v-gps">GPS</span>
   </div>
   <div class="va-cuerpo">
+    <div id="v-mapa"></div>
     <div class="va-reloj"><div class="n" id="v-reloj">0:00</div><div class="e">Tiempo</div></div>
     <div class="va-datos" id="v-datos"></div>
-    <div id="v-mapa"></div>
   </div>
   <div class="va-pie" id="v-pie"></div>
 </div>
 
 <nav class="tabs" id="tabs"></nav>
 
+<script src="lib/leaflet.js"></script>
+<script src="mapa.js"></script>
 <script src="almacen.js"></script>
 <script src="comun.js"></script>
 <script>
@@ -383,58 +413,55 @@ const intensidadTexto = () =>
  * La proyección corrige la longitud por el coseno de la latitud. Sin
  * eso, un recorrido en Costa Rica se vería estirado a lo ancho.
  */
+let mapaVivo = null;
+
+/**
+ * Mapa real, con las calles alrededor.
+ *
+ * La versión anterior dibujaba sólo el trazo del recorrido sobre un
+ * fondo vacío. Se veía la forma, pero no decía NADA de dónde estuvo la
+ * persona: sin calles ni referencias, una vuelta a la manzana y una
+ * vuelta al parque son la misma figura. Para reconocer tu propia ruta
+ * hace falta ver por dónde pasa.
+ */
 function pintarMapa() {
   const z = document.getElementById("v-mapa");
+  if (!z) return;
+
   const p = puntos.filter(x => !Number.isFinite(x.precision) || x.precision <= 50);
-  if (p.length < 3) { z.innerHTML = ""; return; }
 
-  z.innerHTML = `<div class="mapa">${svgRecorrido(p)}</div>`;
-}
+  if (!mapaVivo) {
+    if (p.length < 1) return;
+    document.querySelector(".va-cuerpo").classList.add("con-mapa");
+    z.style.flex = "1";
+    z.style.display = "flex";
+    z.innerHTML = `<div class="mapa-vivo" id="lienzo-mapa">
+        <button class="b-centrar" onclick="mapaVivo && mapaVivo.centrar()"
+                title="Centrar en mí">&#9678;</button>
+      </div>`;
+    // Leaflet mide el contenedor al crearse: si todavía no tiene alto,
+    // el mapa queda de cero píxeles. Hay que esperar a que el navegador
+    // lo haya colocado.
+    //
+    // Con requestAnimationFrame esto NO se ejecutaba con la pantalla
+    // apagada o la aplicación en segundo plano: el navegador no pinta
+    // cuadros y la función queda esperando para siempre. Justo el caso
+    // de alguien que arranca a correr y se guarda el teléfono. Con
+    // setTimeout se ejecuta igual, se vea o no.
+    setTimeout(() => {
+      try {
+        mapaVivo = Mapa.enVivo("lienzo-mapa", { manipulable: true });
+        mapaVivo.mover(p);
+      } catch (err) {
+        // Sin mapa la actividad se sigue midiendo: el GPS y el
+        // cronómetro no dependen de él.
+        console.warn("mapa no disponible:", err.message);
+      }
+    }, 60);
+    return;
+  }
 
-function svgRecorrido(p, alto) {
-  const latMedia = p.reduce((a, x) => a + x.lat, 0) / p.length;
-  const k = Math.cos(latMedia * Math.PI / 180);
-
-  const xs = p.map(x => x.lon * k), ys = p.map(x => -x.lat);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-
-  const anchoG = Math.max(maxX - minX, 1e-9), altoG = Math.max(maxY - minY, 1e-9);
-  const W = 400, H = alto || 300, pad = 22;
-  // Una sola escala para los dos ejes: escalarlos por separado deformaría
-  // el recorrido, y una vuelta a la manzana se vería como un rectángulo
-  // largo. La forma tiene que ser reconocible.
-  const escala = Math.min((W - pad * 2) / anchoG, (H - pad * 2) / altoG);
-  const offX = (W - anchoG * escala) / 2, offY = (H - altoG * escala) / 2;
-
-  const d = p.map((x, i) =>
-    `${i === 0 ? "M" : "L"}${((x.lon * k - minX) * escala + offX).toFixed(1)},` +
-    `${((-x.lat - minY) * escala + offY).toFixed(1)}`).join(" ");
-
-  const px = (x) => ((x.lon * k - minX) * escala + offX).toFixed(1);
-  const py = (x) => ((-x.lat - minY) * escala + offY).toFixed(1);
-
-  // Cuánto mide en la realidad el ancho del dibujo, para la escala.
-  const metrosAncho = anchoG / k * 111195;
-
-  return `
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="g-ruta" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#4a8ee0"/><stop offset="100%" stop-color="#2b74c4"/>
-        </linearGradient>
-      </defs>
-      <path d="${d}" fill="none" stroke="rgba(43,116,196,.25)" stroke-width="9"
-            stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="${d}" fill="none" stroke="url(#g-ruta)" stroke-width="3.2"
-            stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="${px(p[0])}" cy="${py(p[0])}" r="5.5" fill="#268a60" stroke="#0e1620" stroke-width="2"/>
-      <circle cx="${px(p[p.length - 1])}" cy="${py(p[p.length - 1])}" r="5.5"
-              fill="#c9603c" stroke="#0e1620" stroke-width="2"/>
-    </svg>
-    <div class="escala">${metrosAncho > 1000
-      ? (metrosAncho / 1000).toFixed(1) + " km de ancho"
-      : Math.round(metrosAncho) + " m de ancho"}</div>`;
+  mapaVivo.mover(p);
 }
 
 function pintarPieAct() {
@@ -463,6 +490,11 @@ function ponerIntensidad(i) { intensidad = i; pintarPieAct(); pintarDatos(); }
 
 function pararTodo() {
   clearInterval(tickAct); tickAct = null;
+  // Leaflet deja escuchas de eventos vivas si no se le avisa. Sin esto,
+  // empezar y terminar cinco actividades deja cinco mapas en memoria.
+  if (mapaVivo) { try { mapaVivo.soltar(); } catch (e) {} mapaVivo = null; }
+  const cuerpo = document.querySelector(".va-cuerpo");
+  if (cuerpo) cuerpo.classList.remove("con-mapa");
   if (vigia !== null) { navigator.geolocation.clearWatch(vigia); vigia = null; }
   if (candadoAct) { try { candadoAct.release(); } catch (e) {} candadoAct = null; }
   corriendo = false;
@@ -579,9 +611,7 @@ async function verUna(id) {
         <button class="btn sec chico" onclick="document.getElementById('detalle').remove()">Cerrar</button>
       </div>
       <div class="t-cu">
-        ${rec && rec.length >= 3 ? `<div class="mapa" style="margin-bottom:14px">
-          ${svgRecorrido(rec.map(p => ({ lat: p.lat, lon: p.lon, altitud: p.a, t: p.t })))}
-        </div>` : ""}
+        ${rec && rec.length >= 3 ? `<div class="mapa" id="mapa-det" style="margin-bottom:14px"></div>` : ""}
         <div class="resu">
           <div><b>${Math.round(a.segundos / 60)}</b><span>minutos</span></div>
           ${a.metros ? `<div><b>${(a.metros / 1000).toFixed(2)}</b><span>km</span></div>` : ""}
@@ -598,6 +628,9 @@ async function verUna(id) {
                 onclick="borrarAct(${a.id})">Borrar actividad</button>
       </div>
     </div>`);
+  if (rec && rec.length >= 3) {
+    setTimeout(() => { try { Mapa.recorrido("mapa-det", rec); } catch (e) {} }, 60);
+  }
   window.scrollTo({ top: document.getElementById("detalle").offsetTop - 70, behavior: "smooth" });
 }
 
