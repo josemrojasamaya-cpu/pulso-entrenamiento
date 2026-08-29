@@ -3,6 +3,7 @@ const pool = require("../config/db");
 const { requiereSesion, exigirAccesoAtleta } = require("../middleware/auth");
 const { detectarEstancamiento, volumen } = require("../lib/progresion");
 const { nivelDe, caloriasEstimadas } = require("../lib/puntos");
+const { rangoDe } = require("../lib/rangos");
 
 const router = express.Router();
 router.use(requiereSesion);

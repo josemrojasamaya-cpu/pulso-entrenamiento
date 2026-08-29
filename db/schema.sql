@@ -753,3 +753,36 @@ ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS tema VARCHAR(20) NOT NULL DEFAULT 
 -- Las fotos de PROGRESO son otra cosa —de cuerpo entero, muchas por
 -- persona, y se comparan entre sí— y por eso viven en su propia tabla.
 ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS foto TEXT;
+
+
+-- ---------------------------------------------------------------------
+--  Limpieza de puntos duplicados
+--
+--  La cuenta de ejemplo llegó a acumular 921.600 puntos. A 50 por
+--  sesión eso son 18.432 sesiones, que nadie hizo: son filas repetidas,
+--  sembradas antes de que la restricción única existiera.
+--
+--  No es cosmético. Con esos números TODOS quedan en Legendario y el
+--  rango deja de significar nada el mismo día que se estrena.
+--
+--  Se borran los duplicados dejando el más antiguo de cada grupo. Va en
+--  el esquema y no como una corrección a mano porque tiene que aplicarse
+--  también en una base creada desde cero con datos viejos importados.
+-- ---------------------------------------------------------------------
+DELETE FROM puntos a USING puntos b
+ WHERE a.id > b.id
+   AND a.usuario_id = b.usuario_id
+   AND a.tipo = b.tipo
+   AND a.referencia IS NOT DISTINCT FROM b.referencia
+   AND a.fecha = b.fecha;
+
+-- Los que quedaron sin referencia y repetidos el mismo día por el mismo
+-- concepto: se conserva uno. Una persona no gana dos veces el mismo
+-- premio el mismo día.
+DELETE FROM puntos a USING puntos b
+ WHERE a.id > b.id
+   AND a.referencia IS NULL AND b.referencia IS NULL
+   AND a.usuario_id = b.usuario_id
+   AND a.tipo = b.tipo
+   AND a.fecha = b.fecha
+   AND a.puntos = b.puntos;
