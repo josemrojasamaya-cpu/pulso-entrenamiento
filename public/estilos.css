@@ -69,7 +69,7 @@ html{-webkit-text-size-adjust:100%; background:var(--bg)}
 */
 body::before{
   content:""; position:fixed; inset:0; z-index:-2;
-  background:url('/fondo.svg?v=3') center center/cover no-repeat;
+  background:var(--fondo-img, url('/fondo.svg?v=3')) center center/cover no-repeat;
   pointer-events:none;
 }
 /* Velo: el fondo tiene que acompañar, no competir con el contenido. */
@@ -351,9 +351,11 @@ tr.clic:hover td{background:var(--gr-750)}
 /* El fondo con la silueta es una imagen oscura. En una paleta clara se
    cambia por un degradado suave: una silueta gris sobre blanco se lee
    como una mancha, no como una foto de gimnasio. */
-:root[data-claro="1"] body::before{
+/* En paleta clara, el fondo original -una silueta oscura- se lee como
+   una mancha. Sólo ESE se cambia; los generados ya se tiñen solos con
+   el acento del tema y se ven bien en claro. */
+:root[data-claro="1"][data-fondo="silueta"] body::before{
   background:linear-gradient(165deg, var(--sup), var(--bg) 60%) !important;
-  opacity:1 !important;
 }
 
 :root[data-claro="1"] .btn:not(.sec){color:#fff}
@@ -363,3 +365,143 @@ tr.clic:hover td{background:var(--gr-750)}
 :root[data-claro="1"]{
   --sombra:0 1px 2px rgba(20,30,45,.07), 0 6px 18px rgba(20,30,45,.09);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOVIMIENTO
+   
+   Tres reglas que se siguen en todo lo de abajo:
+   
+   1. Nada dura más de 300 ms. Una animación que se nota es una
+      animación que estorba: la persona ya sabe qué tocó y está
+      esperando el resultado.
+   2. Todo lo que se toca responde en el momento. El retraso entre el
+      dedo y la reacción es lo que hace que una aplicación se sienta
+      barata, mucho más que los colores.
+   3. Todo se apaga con prefers-reduced-motion. Para quien tiene
+      vértigo o migraña, el movimiento no es un adorno: es un síntoma.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Entrada de la pantalla. Muy corta y muy corta la distancia: se
+   percibe como que el contenido "llegó", no como que se desliza. */
+@keyframes entrar{
+  from{opacity:0; transform:translateY(9px)}
+  to{opacity:1; transform:none}
+}
+.pagina > *{animation:entrar .34s cubic-bezier(.22,.9,.3,1) both}
+.pagina > *:nth-child(1){animation-delay:.02s}
+.pagina > *:nth-child(2){animation-delay:.06s}
+.pagina > *:nth-child(3){animation-delay:.10s}
+.pagina > *:nth-child(4){animation-delay:.14s}
+.pagina > *:nth-child(n+5){animation-delay:.17s}
+
+/* Tarjetas: se levantan un pelo al pasar por encima y se hunden al
+   tocarlas. El hundido importa más que el levantado — es la
+   confirmación física de que el toque entró. */
+.tarjeta{transition:transform .2s cubic-bezier(.22,.9,.3,1), border-color .2s, box-shadow .2s}
+.tarjeta:active{transform:scale(.994)}
+
+/* Botones */
+.btn, .btn-serie, .btn-agua, .dep, .pal, .lugares button, .solapas-s button{
+  transition:transform .14s cubic-bezier(.3,.9,.4,1), background .18s,
+             border-color .18s, color .18s, box-shadow .2s;
+}
+.btn:active, .btn-serie:active, .btn-agua:active, .dep:active{transform:scale(.97)}
+.btn:not(.sec):not(:disabled):hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 20px -10px color-mix(in srgb, var(--az) 75%, transparent);
+}
+
+/* Campos: el borde crece hacia el color de acento en vez de saltar. */
+input, select, textarea{transition:border-color .18s, background .18s, box-shadow .18s}
+input:focus, select:focus, textarea:focus{
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--az) 18%, transparent);
+}
+
+/* Serie completada: un destello verde y ya. Dura poco a propósito —
+   se hacen veinte series por sesión y una celebración larga cansa. */
+@keyframes destello{
+  0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent)}
+  100%{box-shadow:0 0 0 14px transparent}
+}
+.btn-serie.hecha{animation:destello .5s ease-out}
+
+/* Las pestañas de abajo: el icono da un salto corto al cambiar. Es el
+   único adorno puro de esta lista, y se queda porque es lo que más se
+   toca en toda la aplicación. */
+@keyframes brinco{
+  0%,100%{transform:translateY(0)}
+  45%{transform:translateY(-3px)}
+}
+.tabs a.on svg{animation:brinco .34s cubic-bezier(.3,.9,.4,1)}
+.tabs a{transition:color .18s}
+.tabs a svg{transition:transform .18s}
+.tabs a:active svg{transform:scale(.88)}
+
+/* Avisos: entran desde arriba en vez de aparecer de golpe. Un mensaje
+   de error que aparece sin transición se siente como un fallo. */
+@keyframes bajar{
+  from{opacity:0; transform:translateY(-7px)}
+  to{opacity:1; transform:none}
+}
+.aviso, .aviso-fila{animation:bajar .26s cubic-bezier(.22,.9,.3,1) both}
+
+/* Barras y anillos de progreso: el valor se mueve hacia su destino en
+   vez de aparecer ahí. Deja ver el cambio respecto de la última vez. */
+.barra-sem .col, .agua, .zona div, .s-progreso div{
+  transition:height .55s cubic-bezier(.3,.85,.4,1),
+             width .55s cubic-bezier(.3,.85,.4,1), background .3s;
+}
+
+/* Diálogos */
+@keyframes velo-entra{from{opacity:0} to{opacity:1}}
+@keyframes caja-entra{
+  from{opacity:0; transform:scale(.965) translateY(10px)}
+  to{opacity:1; transform:none}
+}
+.modal, .descanso{animation:velo-entra .2s ease both}
+.modal > *, .descanso .n{animation:caja-entra .28s cubic-bezier(.22,.9,.3,1) both}
+
+/* Esqueleto de carga: en vez de la palabra «Cargando…», una barra que
+   respira. Dice «viene algo» sin obligar a leer. */
+@keyframes respirar{0%,100%{opacity:.35} 50%{opacity:.75}}
+.cargando{animation:respirar 1.4s ease-in-out infinite}
+
+/* El fondo entra suave al cambiar de paleta o de imagen, en vez de
+   saltar de una a otra. */
+body::before{transition:background-image .4s ease, opacity .4s ease}
+
+/* ── Y todo esto se apaga si el sistema lo pide ────────────────────
+   No es una cortesía: para quien tiene vértigo vestibular o migraña
+   con aura, una interfaz que se mueve produce síntomas reales. */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+
+
+/* ── El velo, según el fondo ───────────────────────────────────────
+   El velo existe para que una FOTO no compita con el texto: sin él, la
+   silueta a contraluz o la foto de alguien vuelven ilegible media
+   pantalla.
+   
+   Los fondos generados no tienen ese problema. Son trazos finos sobre
+   el color de fondo del propio tema, ya pensados para quedar debajo.
+   Con el velo al 90% encima no se ven: eligiendo «Ondas» la pantalla
+   quedaba idéntica a «Liso», y quien pagó por ellos vería que no pasa
+   nada.
+   
+   Así que el velo se afloja para los generados y se mantiene fuerte
+   para la silueta y la foto propia, que son las que sí tapan. */
+:root:not([data-fondo="silueta"]):not([data-fondo="propio"]) body::after{
+  background:linear-gradient(180deg,
+    color-mix(in srgb, var(--bg) 30%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 45%, transparent) 100%);
+}
+
+/* «Liso» no lleva velo: no hay nada que atenuar. */
+:root[data-fondo="liso"] body::after{background:none}

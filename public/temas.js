@@ -164,6 +164,13 @@ const Temas = {
         set("--velo-2",     rgba(c.fondo, esClaro ? .70 : .88));
         set("--velo-3",     rgba(c.fondo, esClaro ? .82 : .94));
 
+        // El fondo se repinta con el tema porque se tiñe con el acento.
+        // Si se aplicaran por separado, cambiar de paleta dejaría el
+        // fondo del color anterior hasta la siguiente recarga.
+        if (window.Fondos) {
+            try { window.Fondos.aplicar(window.Fondos.guardado(), c); } catch (e) {}
+        }
+
         document.documentElement.dataset.tema = codigo;
         document.documentElement.dataset.claro = esClaro ? "1" : "0";
 

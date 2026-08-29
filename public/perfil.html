@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="estilos.css">
+<script src="fondos.js"></script>
 <script src="temas.js"></script>
 <style>
 .seccion{margin-bottom:20px}
@@ -42,6 +43,25 @@
   background:rgba(8,12,18,.82); display:grid; place-items:center; font-size:11px;
 }
 .pal.bloqueada .muestra{opacity:.42}
+
+.fondos-r{display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:10px}
+.fon{
+  border:2px solid var(--borde); border-radius:13px; cursor:pointer; padding:0;
+  background:none; overflow:hidden; transition:.16s; position:relative; text-align:left;
+}
+.fon:hover{transform:translateY(-2px)}
+.fon.on{border-color:var(--az)}
+.fon .vp{height:64px; background-size:cover; background-position:center}
+.fon .pie-f{padding:7px 9px; background:var(--gr-850)}
+.fon .pie-f b{display:block; font-size:12px; font-weight:700; color:var(--tx)}
+.fon .pie-f span{font-size:9.5px; color:var(--tx3)}
+.fon .candado{
+  position:absolute; top:5px; right:5px; width:21px; height:21px; border-radius:50%;
+  background:rgba(8,12,18,.82); display:grid; place-items:center; font-size:10px;
+}
+.fon.bloqueada .vp{opacity:.45}
+.fon.subir .vp{display:grid; place-items:center; background:var(--gr-750);
+  font-size:22px; color:var(--tx3)}
 </style>
 </head>
 <body>
@@ -55,6 +75,7 @@
   </div>
   <div id="plan"></div>
   <div id="temas"></div>
+  <div id="fondos"></div>
   <div id="contenido"><div class="cargando">Cargando…</div></div>
 </main>
 
@@ -75,6 +96,7 @@ async function cargar() {
   pintarEstructura("perfil");
   verPlan();
   verTemas();
+  verFondos();
   try {
     const [datos, catalogo] = await Promise.all([
       api(`/atleta/${usuario.id}/perfil`),
@@ -547,6 +569,138 @@ async function elegirTema(codigo, bloqueada) {
     document.getElementById("tema-msg").innerHTML =
       `<div class="aviso mal">${esc(err.message)}</div>`;
   }
+}
+
+/* ── Fondos ───────────────────────────────────────────────────────── */
+
+async function verFondos() {
+  const F = window.Fondos, T = window.Temas;
+  if (!F || !T) return;
+
+  let alDia = false;
+  try {
+    const p = await api("/cupones/mi-plan");
+    alDia = p.vigente && p.plan !== "gratis";
+  } catch (e) {}
+
+  const cols = T.TEMAS[T.guardado()].c;
+  const actual = F.guardado();
+
+  document.getElementById("fondos").innerHTML = `
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="t-cab"><h2>Fondo</h2></div>
+      <div class="t-cu">
+        <p style="font-size:13px; color:var(--tx2); line-height:1.55; margin-bottom:16px">
+          Se tiñe solo con la paleta que elijas. Los ocho pesan menos que una foto.
+        </p>
+        <div class="fondos-r">
+          ${Object.entries(F.FONDOS).map(([codigo, f]) => {
+            const bloq = !f.gratis && !alDia;
+            const vista = f.archivo
+              ? `url('${f.archivo}?v=3')`
+              : F.generar(codigo, cols);
+            return `
+              <button class="fon ${codigo === actual ? "on" : ""} ${bloq ? "bloqueada" : ""}"
+                      onclick="elegirFondo('${codigo}', ${bloq})">
+                <div class="vp" style="background-image:${vista}"></div>
+                ${bloq ? `<div class="candado">🔒</div>` : ""}
+                <div class="pie-f"><b>${esc(f.nombre)}</b>
+                  <span>${f.gratis ? "Incluido" : "Plan completo"}</span></div>
+              </button>`;
+          }).join("")}
+
+          <button class="fon subir ${actual === "propio" ? "on" : ""}
+                  ${!alDia ? "bloqueada" : ""}" onclick="subirFondo(${!alDia})">
+            <div class="vp" style="${F.fotoPropia()
+              ? `background-image:url('${F.fotoPropia()}')` : ""}">
+              ${F.fotoPropia() ? "" : "+"}
+            </div>
+            ${!alDia ? `<div class="candado">🔒</div>` : ""}
+            <div class="pie-f"><b>Tu foto</b><span>Plan completo</span></div>
+          </button>
+        </div>
+        <p style="font-size:11.5px; color:var(--tx3); line-height:1.55; margin-top:12px">
+          Tu foto se guarda solo en este teléfono. No se sube a ningún lado.
+        </p>
+        <div id="fondo-msg" style="margin-top:10px"></div>
+      </div>
+    </div>`;
+}
+
+function elegirFondo(codigo, bloqueada) {
+  const msg = document.getElementById("fondo-msg");
+  if (bloqueada) {
+    const antes = Fondos.guardado();
+    Fondos.elegir(codigo);
+    msg.innerHTML = `<div class="aviso">Así se ve. Es parte del plan completo.</div>`;
+    setTimeout(() => { Fondos.elegir(antes); verFondos(); }, 4000);
+    return;
+  }
+  Fondos.elegir(codigo);
+  verFondos();
+}
+
+/**
+ * Foto propia como fondo.
+ *
+ * La imagen se REDUCE antes de guardarla. Una foto de teléfono son tres
+ * o cuatro megas y el almacenamiento local del navegador ronda los
+ * cinco: guardarla entera lo llena y rompe también lo demás que la
+ * aplicación guarda ahí, incluidas las series pendientes de subir.
+ */
+function subirFondo(bloqueada) {
+  if (bloqueada) {
+    document.getElementById("fondo-msg").innerHTML =
+      `<div class="aviso">Poner tu propia foto es parte del plan completo.</div>`;
+    return;
+  }
+
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = "image/*";
+  inp.onchange = () => {
+    const archivo = inp.files && inp.files[0];
+    if (!archivo) return;
+
+    const msg = document.getElementById("fondo-msg");
+    msg.innerHTML = `<div class="aviso">Preparando la imagen…</div>`;
+
+    const lector = new FileReader();
+    lector.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        // 1080 de alto alcanza para cualquier teléfono actual y deja el
+        // archivo en unos 200 KB en vez de varios megas.
+        const alto = Math.min(1080, img.height);
+        const ancho = Math.round(img.width * (alto / img.height));
+        const c = document.createElement("canvas");
+        c.width = ancho; c.height = alto;
+        c.getContext("2d").drawImage(img, 0, 0, ancho, alto);
+
+        const datos = c.toDataURL("image/jpeg", 0.72);
+
+        if (!Fondos.guardarFoto(datos)) {
+          msg.innerHTML = `<div class="aviso mal">No hay espacio en este teléfono
+            para guardar la imagen. Probá con una más chica.</div>`;
+          return;
+        }
+        Fondos.elegir("propio");
+        verFondos();
+        document.getElementById("fondo-msg").innerHTML =
+          `<div class="aviso ok">Listo. Tu foto es el fondo.</div>`;
+      };
+      img.onerror = () => {
+        msg.innerHTML = `<div class="aviso mal">No se pudo leer esa imagen.</div>`;
+      };
+      img.src = lector.result;
+    };
+    lector.onerror = () => {
+      document.getElementById("fondo-msg").innerHTML =
+        `<div class="aviso mal">No se pudo abrir el archivo.</div>`;
+    };
+    lector.readAsDataURL(archivo);
+  };
+  inp.click();
 }
 </script>
 </body>

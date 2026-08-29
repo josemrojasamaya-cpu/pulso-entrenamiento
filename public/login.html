@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="estilos.css">
+<script src="fondos.js"></script>
 <script src="temas.js"></script>
 <style>
 body{padding-bottom:0; min-height:100dvh}
@@ -130,6 +131,29 @@ body::after{background:linear-gradient(180deg,
 .roles .rol.on{border-color:var(--az); background:var(--az-tenue); color:var(--tx)}
 .roles .rol b{display:block; font-size:13.5px; font-weight:700}
 .roles .rol small{display:block; font-size:11px; color:var(--tx3); margin-top:2px}
+
+/* Firma del creador */
+.firma{
+  display:inline-flex; align-items:center; gap:13px; margin:26px 0 4px;
+  padding:11px 20px 11px 12px; border-radius:40px; text-decoration:none;
+  background:var(--gr-850); border:1px solid var(--borde);
+  transition:.2s; color:inherit;
+}
+.firma:hover{border-color:var(--az); transform:translateY(-1px)}
+.firma .ini{
+  width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center;
+  background:linear-gradient(150deg,var(--az),var(--az-2)); color:#fff;
+  font-weight:800; font-size:14.5px; letter-spacing:.5px;
+}
+.firma .tx{display:flex; flex-direction:column; line-height:1.3; text-align:left}
+.firma .tx b{font-size:15px; font-weight:700; letter-spacing:-.2px; color:var(--tx)}
+.firma .tx i{font-style:normal; font-size:11.5px; color:var(--tx3); margin-top:1px}
+@media(max-width:560px){
+  .firma{padding:10px 17px 10px 10px; gap:11px}
+  .firma .ini{width:36px; height:36px; font-size:13px}
+  .firma .tx b{font-size:14px}
+  .firma .tx i{font-size:11px}
+}
 </style>
 </head>
 <body>
@@ -145,6 +169,20 @@ body::after{background:linear-gradient(180deg,
     Según tus medidas, tus condiciones de salud, el equipo que tengas a mano
     y lo que levantaste la última vez. En el gimnasio o en tu casa.
   </p>
+
+  <!-- La firma va acá y no en el pie.
+       Abajo del todo no la lee nadie: en un teléfono hay que recorrer la
+       pantalla entera para llegar. Acá se lee justo después de entender
+       qué hace la aplicación, que es el momento en que a alguien le
+       importa quién la hizo. Y va contenida: una firma que grita tapa lo
+       que firma. -->
+  <a class="firma" href="https://josemrojas.netlify.app" target="_blank" rel="noopener">
+    <span class="ini">JM</span>
+    <span class="tx">
+      <b>José Miguel Rojas Amaya</b>
+      <i>Desarrollador y creador de Pulso</i>
+    </span>
+  </a>
 
   <div class="capacidades">
     <div class="cap">
@@ -302,7 +340,6 @@ body::after{background:linear-gradient(180deg,
 </section>
 
 <div class="pie">
-  Pulso · entrenamiento adaptativo<br>
   <a href="terminos.html">Términos y condiciones</a> ·
   <a href="https://entrenapulso.netlify.app">entrenapulso.netlify.app</a>
 </div>
