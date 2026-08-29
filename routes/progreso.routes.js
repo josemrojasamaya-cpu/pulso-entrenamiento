@@ -89,6 +89,7 @@ router.get("/:id/resumen", exigirAccesoAtleta, async (req, res) => {
                 porcentaje
             },
             nivel: nivelDe(pts.rows[0].total),
+            rango: rangoDe(pts.rows[0].total),
             totales: {
                 dias_entrenados: sesiones.rows[0].dias,
                 volumen_total: Math.round(Number(sesiones.rows[0].volumen_total) || 0),
@@ -267,7 +268,8 @@ router.get("/mis-atletas", async (req, res) => {
              ORDER BY u.nombre`,
             [req.usuario.rol, req.usuario.id]
         );
-        res.json(r.rows.map(a => ({ ...a, nivel_juego: nivelDe(a.puntos) })));
+        res.json(r.rows.map(a => ({ ...a, nivel_juego: nivelDe(a.puntos),
+                                     rango: rangoDe(a.puntos) })));
     } catch (err) {
         console.error("[ATLETAS]", err.message);
         res.status(500).json({ message: "No se pudo leer la lista." });

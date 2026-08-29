@@ -515,3 +515,49 @@ body::before{transition:background-image .4s ease, opacity .4s ease}
   width:26px; height:26px; border-radius:50%; object-fit:cover;
   border:1px solid var(--borde); flex:none; margin-right:2px;
 }
+
+
+/* ── Rango ─────────────────────────────────────────────────────────── */
+.nivel-pin{
+  border:1px solid var(--borde); border-radius:20px; padding:3px 10px;
+  font-size:11px; font-weight:800; letter-spacing:.3px; white-space:nowrap;
+  transition:color .3s, border-color .3s;
+}
+
+.escudo{
+  display:flex; align-items:center; gap:16px; padding:20px;
+  background:var(--gr-850); border:1px solid var(--borde); border-radius:var(--radio);
+}
+.escudo .placa{
+  width:72px; height:80px; flex:none; display:grid; place-items:center;
+  /* Forma de escudo con clip-path: es un polígono, no una imagen, así
+     que toma el color del rango sin necesitar seis archivos distintos. */
+  clip-path:polygon(50% 0%, 100% 18%, 100% 68%, 50% 100%, 0% 68%, 0% 18%);
+  background:linear-gradient(160deg, currentColor, color-mix(in srgb, currentColor 55%, #000));
+  position:relative;
+}
+.escudo .placa span{
+  font-size:22px; font-weight:900; color:#fff; letter-spacing:-.5px;
+  text-shadow:0 2px 6px rgba(0,0,0,.45);
+}
+.escudo .info{flex:1; min-width:0}
+.escudo .info b{display:block; font-size:19px; font-weight:800; letter-spacing:-.4px}
+.escudo .info .pts{font-size:12.5px; color:var(--tx3); margin-top:2px}
+.escudo .barra-r{
+  height:7px; border-radius:4px; background:var(--gr-750); margin-top:12px; overflow:hidden;
+}
+.escudo .barra-r i{
+  display:block; height:100%; border-radius:4px; background:currentColor;
+  transition:width .8s cubic-bezier(.3,.85,.4,1);
+}
+.escudo .falta{font-size:11.5px; color:var(--tx3); margin-top:7px}
+
+/* La escala completa, para ver qué viene */
+.escala{display:flex; gap:5px; margin-top:16px; flex-wrap:wrap}
+.escala .paso-r{
+  flex:1; min-width:46px; text-align:center; padding:7px 3px; border-radius:8px;
+  border:1px solid var(--borde); background:var(--gr-900); opacity:.42;
+  font-size:10px; font-weight:700; transition:.25s;
+}
+.escala .paso-r.logrado{opacity:1}
+.escala .paso-r.actual{opacity:1; border-color:currentColor; background:var(--gr-800)}

@@ -265,7 +265,17 @@ async function mostrarNivel() {
   const u = Sesion.usuario();
   try {
     const r = await api(`/progreso/${u.id}/resumen`);
-    pin.textContent = `Nv ${r.nivel.nivel}`;
+    // El rango pesa mas que el nivel para quien mira: "Plata II" dice
+    // donde estas frente a los demas; "Nv 7" no dice nada sin contexto.
+    if (r.rango) {
+      pin.textContent = r.rango.nombre;
+      pin.style.color = r.rango.color;
+      pin.style.borderColor = r.rango.color + "55";
+      pin.title = `${r.rango.puntos} puntos` +
+        (r.rango.siguiente ? ` · faltan ${r.rango.falta} para ${r.rango.siguiente}` : " · rango máximo");
+    } else {
+      pin.textContent = `Nv ${r.nivel.nivel}`;
+    }
     pin.title = `${r.nivel.titulo} · ${r.nivel.puntos} puntos`;
   } catch {
     pin.style.display = "none";

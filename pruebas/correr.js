@@ -13,6 +13,7 @@ const SUITES = [
     { archivo: "importar.js",   necesitaServidor: false },
     { archivo: "cronometro.js", necesitaServidor: false },
     { archivo: "actividades.js", necesitaServidor: false },
+    { archivo: "rangos.js",      necesitaServidor: false },
     { archivo: "api.js",        necesitaServidor: true  }
 ];
 

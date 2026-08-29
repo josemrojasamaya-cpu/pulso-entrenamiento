@@ -78,6 +78,8 @@ function pintar(r) {
   const n = r.nivel;
 
   document.getElementById("contenido").innerHTML = `
+    ${r.rango ? pintarRango(r.rango) : ""}
+
     <div class="tarjeta" style="margin-bottom:16px"><div class="t-cu">
       <div style="display:flex; align-items:baseline; gap:10px">
         <div style="font-size:30px; font-weight:800; letter-spacing:-1px">Nivel ${n.nivel}</div>
@@ -160,6 +162,53 @@ function pintar(r) {
 }
 
 cargar();
+
+/**
+ * El escudo del rango, con la escala completa debajo.
+ *
+ * La escala se muestra ENTERA, incluidos los rangos que faltan. Ver
+ * "Legendario" al final desde el primer día es lo que hace que alguien
+ * quiera llegar; esconder lo que no se alcanzó todavía deja el progreso
+ * sin destino.
+ */
+function pintarRango(g) {
+  const ESCALA = [
+    { n: "Bronce",  c: "#b0733d" }, { n: "Plata",    c: "#a8b3bd" },
+    { n: "Oro",     c: "#d8a63c" }, { n: "Platino",  c: "#5ec4c4" },
+    { n: "Diamante",c: "#6ea8f0" }, { n: "Legendario", c: "#c15fd8" }
+  ];
+  const iActual = ESCALA.findIndex(x => x.n === g.base);
+
+  return `
+    <div class="tarjeta" style="margin-bottom:16px"><div class="t-cu">
+      <div class="escudo" style="color:${g.color}">
+        <div class="placa"><span>${esc(g.division === 1 && g.max ? "★" : String(g.division))}</span></div>
+        <div class="info">
+          <b style="color:${g.color}">${esc(g.nombre)}</b>
+          <div class="pts">${g.puntos} puntos de constancia</div>
+          <div class="barra-r"><i style="width:${g.avance}%"></i></div>
+          <div class="falta">
+            ${g.max
+              ? "Llegaste al rango máximo. Ahora se trata de sostenerlo."
+              : `Te faltan <b style="color:${g.color}">${g.falta}</b> para ${esc(g.siguiente)}`}
+          </div>
+        </div>
+      </div>
+
+      <div class="escala">
+        ${ESCALA.map((e, i) => `
+          <div class="paso-r ${i < iActual ? "logrado" : i === iActual ? "actual" : ""}"
+               style="color:${e.c}; ${i <= iActual ? `border-color:${e.c}44` : ""}">
+            ${esc(e.n)}
+          </div>`).join("")}
+      </div>
+
+      <p style="font-size:11.5px; color:var(--tx3); line-height:1.55; margin-top:14px">
+        El rango sube por constancia, no por cuánto levantás. Quien no falla un día
+        está arriba de quien va cuando se acuerda, pese más o menos.
+      </p>
+    </div></div>`;
+}
 </script>
 </body>
 </html>
