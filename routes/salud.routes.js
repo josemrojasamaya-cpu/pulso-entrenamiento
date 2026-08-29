@@ -94,11 +94,41 @@ router.delete("/dispositivos/:id", async (req, res) => {
  * para que la persona baje SUS datos de donde ya los tiene. Si no usa
  * una plataforma, no va a ver nada de esa plataforma, y eso está bien.
  */
-router.get("/aplicaciones", (_req, res) => {
-    res.json({ aplicaciones: catalogo() });
+router.get("/aplicaciones", async (req, res) => {
+    // El catálogo se ve en todos los planes a propósito: es la vitrina
+    // de lo que se compra. Esconderlo sería esconder la razón de pagar.
+    // Lo que se cobra es el acto de importar, no ver qué se podría.
+    let puede = false;
+    try {
+        puede = planDe(await cuentaDe(req.usuario.id)).limites.importar;
+    } catch (e) { /* si falla, se asume el plan gratuito */ }
+
+    res.json({ aplicaciones: catalogo(), puede_importar: puede });
 });
 
 /* ── Importación de archivos ──────────────────────────────────────── */
+
+
+/**
+ * Comprueba que el plan permita importar.
+ *
+ * Va en el servidor y no sólo en la pantalla. Un botón escondido en el
+ * navegador se vuelve a mostrar desde la consola en diez segundos, y la
+ * ruta seguiría aceptando el archivo. Un límite que sólo se muestra no
+ * es un límite.
+ */
+async function puedeImportar(req, res) {
+    const cuenta = await cuentaDe(req.usuario.id);
+    const plan = planDe(cuenta);
+    if (plan.limites.importar) return true;
+
+    res.status(402).json({
+        message: "Traer tu historial de otras aplicaciones es parte del plan completo.",
+        requiere_plan: true,
+        plan_actual: plan.nombre
+    });
+    return false;
+}
 
 /**
  * Lee un archivo y devuelve lo que entendió, SIN guardar nada.
@@ -109,6 +139,7 @@ router.get("/aplicaciones", (_req, res) => {
  * antes.
  */
 router.post("/importar/revisar", async (req, res) => {
+    if (!await puedeImportar(req, res)) return;
     const b = req.body || {};
     if (!b.contenido) return res.status(400).json({ message: "No llegó ningún archivo." });
 
@@ -142,6 +173,10 @@ const TIPOS_BIO = ["pulso", "presion", "pasos", "calorias", "sueno_min", "spo2",
 
 /** Guarda lo que la persona confirmó. */
 router.post("/importar/confirmar", async (req, res) => {
+    // Se comprueba también acá y no sólo en "revisar": son dos rutas
+    // distintas, y quien quiera saltarse el límite iría directo a la
+    // segunda, que es la que escribe.
+    if (!await puedeImportar(req, res)) return;
     const lecturas = Array.isArray(req.body && req.body.lecturas) ? req.body.lecturas : [];
     if (lecturas.length === 0) return res.status(400).json({ message: "No hay nada que importar." });
     if (lecturas.length > 5000) return res.status(400).json({ message: "Demasiadas lecturas de una sola vez." });

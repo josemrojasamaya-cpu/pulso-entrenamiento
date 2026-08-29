@@ -426,4 +426,47 @@ router.delete("/:id/mesociclo", exigirAccesoAtleta, async (req, res) => {
     }
 });
 
+
+/* ── Paleta de color ──────────────────────────────────────────────── */
+
+// Los temas de pago se comprueban ACÁ. En el navegador se aplican sin
+// preguntar —quien fuerce uno desde la consola se pinta su propia
+// pantalla y no le quita nada a nadie— pero guardarlo, que es lo que lo
+// hace permanente y lo lleva a sus otros dispositivos, requiere el plan.
+const TEMAS_GRATIS = ["acero", "carbon"];
+const TEMAS_PAGO = ["brasa", "selva", "vino", "indigo", "hielo", "arena"];
+
+router.put("/tema", async (req, res) => {
+    const tema = String((req.body || {}).tema || "").trim();
+    if (!TEMAS_GRATIS.includes(tema) && !TEMAS_PAGO.includes(tema)) {
+        return res.status(400).json({ message: "Ese tema no existe." });
+    }
+
+    try {
+        if (TEMAS_PAGO.includes(tema)) {
+            const u = await pool.query(
+                `SELECT plan, plan_vence FROM usuarios WHERE id = $1`, [req.usuario.id]);
+            const c = u.rows[0] || {};
+            const alDia = c.plan && c.plan !== "gratis" &&
+                          c.plan_vence && new Date(c.plan_vence) >= new Date(new Date().toDateString());
+            if (!alDia) {
+                return res.status(402).json({
+                    message: "Esta paleta es parte del plan completo.",
+                    requiere_plan: true
+                });
+            }
+        }
+
+        await pool.query(
+            `INSERT INTO perfiles (usuario_id, tema) VALUES ($1,$2)
+             ON CONFLICT (usuario_id) DO UPDATE SET tema = EXCLUDED.tema`,
+            [req.usuario.id, tema]
+        );
+        res.json({ ok: true, tema });
+    } catch (err) {
+        console.error("[TEMA] guardar:", err.message);
+        res.status(500).json({ message: "No se pudo guardar la paleta." });
+    }
+});
+
 module.exports = router;

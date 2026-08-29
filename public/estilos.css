@@ -76,7 +76,7 @@ body::before{
 body::after{
   content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background:linear-gradient(180deg,
-    rgba(6,10,16,.82) 0%, rgba(6,10,16,.88) 45%, rgba(6,10,16,.94) 100%);
+    var(--velo-1) 0%, var(--velo-2) 45%, var(--velo-3) 100%);
 }
 
 body{
@@ -90,7 +90,7 @@ body{
 
 /* ── Encabezado ───────────────────────────────────────────────────── */
 .top{
-  background:rgba(19,25,32,.9); border-bottom:1px solid var(--borde);
+  background:var(--vidrio); border-bottom:1px solid var(--borde);
   position:sticky; top:0; z-index:40;
   backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
 }
@@ -126,7 +126,7 @@ body{
 /* Las superficies dejan pasar algo del fondo: si fueran opacas, el
    fondo sólo se vería en los márgenes y no valdría la pena tenerlo. */
 .tarjeta{
-  background:rgba(24,31,40,.86); border:1px solid var(--borde);
+  background:var(--vidrio-2); border:1px solid var(--borde);
   border-radius:var(--radio); box-shadow:var(--sombra);
   backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
 }
@@ -254,7 +254,7 @@ tr.clic:hover td{background:var(--gr-750)}
 /* ── Barra inferior (celular) ─────────────────────────────────────── */
 .tabs{
   position:fixed; left:0; right:0; bottom:0; z-index:50;
-  background:rgba(19,25,32,.94); border-top:1px solid var(--borde);
+  background:var(--vidrio); border-top:1px solid var(--borde);
   backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   display:flex; padding:6px 4px calc(6px + env(safe-area-inset-bottom));
 }
@@ -270,7 +270,7 @@ tr.clic:hover td{background:var(--gr-750)}
 
 /* ── Modal ────────────────────────────────────────────────────────── */
 .telon{
-  position:fixed; inset:0; background:rgba(6,9,12,.72); z-index:100;
+  position:fixed; inset:0; background:var(--velo-modal); z-index:100;
   display:none; align-items:flex-end; justify-content:center;
   backdrop-filter:blur(3px);
 }
@@ -332,4 +332,34 @@ tr.clic:hover td{background:var(--gr-750)}
   .pagina{padding:16px 14px 30px}
   .titulo h1{font-size:21px}
   .usuario-chip span.nombre{display:none}
+}
+
+
+/* ── Temas claros ─────────────────────────────────────────────────────
+   El fondo con la silueta es una imagen oscura fija detrás de todo.
+   En una paleta clara la tapa entera y la pantalla sigue viéndose
+   negra por más que las variables hayan cambiado: fue exactamente lo
+   que pasó al probar «Hielo» por primera vez.
+
+   Acá no basta con bajarle la opacidad. Una silueta gris sobre fondo
+   blanco se lee como una mancha, no como una foto de gimnasio. Se
+   cambia por un degradado suave que cumple la misma función —dar
+   profundidad— sin ensuciar.
+
+   Las reglas cuelgan de data-claro, que temas.js escribe en el <html>
+   al aplicar la paleta. */
+/* El fondo con la silueta es una imagen oscura. En una paleta clara se
+   cambia por un degradado suave: una silueta gris sobre blanco se lee
+   como una mancha, no como una foto de gimnasio. */
+:root[data-claro="1"] body::before{
+  background:linear-gradient(165deg, var(--sup), var(--bg) 60%) !important;
+  opacity:1 !important;
+}
+
+:root[data-claro="1"] .btn:not(.sec){color:#fff}
+
+/* Las sombras negras profundas de la interfaz oscura se ven sucias
+   sobre blanco. Más suaves y más cortas. */
+:root[data-claro="1"]{
+  --sombra:0 1px 2px rgba(20,30,45,.07), 0 6px 18px rgba(20,30,45,.09);
 }

@@ -720,3 +720,9 @@ UPDATE cupones SET usos = (SELECT COUNT(*) FROM canjes WHERE canjes.codigo = cup
  WHERE codigo LIKE 'PULSO-%';
 UPDATE usuarios SET plan = 'gratis', plan_vence = NULL
  WHERE username = 'atleta' AND plan_vence IS NOT NULL;
+
+
+-- Paleta de color elegida. Va en el perfil y no sólo en el teléfono para
+-- que siga a la persona cuando entre desde otro dispositivo: alguien que
+-- se armó su tema no quiere volver a elegirlo en cada aparato.
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS tema VARCHAR(20) NOT NULL DEFAULT 'acero';

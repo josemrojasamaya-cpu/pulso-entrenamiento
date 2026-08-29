@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="estilos.css">
+<script src="temas.js"></script>
 <style>
 .seccion{margin-bottom:20px}
 .seccion>h2{font-size:15px; font-weight:650; margin-bottom:4px}
@@ -23,6 +24,24 @@
   text-transform:uppercase; letter-spacing:.5px}
 .limites ul{margin:8px 0 0 18px; color:var(--tx2)}
 .limites li{margin-bottom:4px}
+
+.paletas{display:grid; grid-template-columns:repeat(auto-fill,minmax(102px,1fr)); gap:10px}
+.pal{
+  border:2px solid var(--borde); border-radius:13px; padding:0; cursor:pointer;
+  background:none; overflow:hidden; transition:.16s; position:relative; text-align:left;
+}
+.pal:hover{transform:translateY(-2px)}
+.pal.on{border-color:var(--az)}
+.pal .muestra{height:52px; display:flex}
+.pal .muestra i{flex:1; display:block}
+.pal .pie-p{padding:8px 10px; background:var(--gr-850)}
+.pal .pie-p b{display:block; font-size:12.5px; font-weight:700; color:var(--tx)}
+.pal .pie-p span{font-size:10px; color:var(--tx3)}
+.pal .candado{
+  position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%;
+  background:rgba(8,12,18,.82); display:grid; place-items:center; font-size:11px;
+}
+.pal.bloqueada .muestra{opacity:.42}
 </style>
 </head>
 <body>
@@ -35,6 +54,7 @@
     <p>De acá salen todas las decisiones del sistema. Vale la pena que esté al día.</p>
   </div>
   <div id="plan"></div>
+  <div id="temas"></div>
   <div id="contenido"><div class="cargando">Cargando…</div></div>
 </main>
 
@@ -54,6 +74,7 @@ const EQUIPOS = [
 async function cargar() {
   pintarEstructura("perfil");
   verPlan();
+  verTemas();
   try {
     const [datos, catalogo] = await Promise.all([
       api(`/atleta/${usuario.id}/perfil`),
@@ -449,6 +470,82 @@ async function canjear() {
   } finally {
     boton.disabled = false;
     boton.textContent = antes;
+  }
+}
+
+/* ── Paletas ──────────────────────────────────────────────────────── */
+
+async function verTemas() {
+  const t = window.Temas;
+  if (!t) return;
+
+  let alDia = false;
+  try {
+    const p = await api("/cupones/mi-plan");
+    alDia = p.vigente && p.plan !== "gratis";
+  } catch (e) {}
+
+  const actual = t.guardado();
+
+  document.getElementById("temas").innerHTML = `
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="t-cab"><h2>Paleta</h2></div>
+      <div class="t-cu">
+        <p style="font-size:13px; color:var(--tx2); line-height:1.55; margin-bottom:16px">
+          El color de toda la aplicación. Se aplica al instante y te sigue
+          a cualquier dispositivo donde entres.
+        </p>
+        <div class="paletas">
+          ${Object.entries(t.TEMAS).map(([codigo, tema]) => {
+            const bloqueada = !tema.gratis && !alDia;
+            return `
+            <button class="pal ${codigo === actual ? "on" : ""} ${bloqueada ? "bloqueada" : ""}"
+                    onclick="elegirTema('${codigo}', ${bloqueada})">
+              <div class="muestra">
+                <i style="background:${tema.c.fondo}"></i>
+                <i style="background:${tema.c.sup}"></i>
+                <i style="background:${tema.c.ac}"></i>
+                <i style="background:${tema.c.ac2}"></i>
+              </div>
+              ${bloqueada ? `<div class="candado">🔒</div>` : ""}
+              <div class="pie-p">
+                <b>${esc(tema.nombre)}</b>
+                <span>${tema.gratis ? "Incluida" : "Plan completo"}</span>
+              </div>
+            </button>`;
+          }).join("")}
+        </div>
+        <div id="tema-msg" style="margin-top:12px"></div>
+      </div>
+    </div>`;
+}
+
+async function elegirTema(codigo, bloqueada) {
+  const msg = document.getElementById("tema-msg");
+
+  if (bloqueada) {
+    // Se deja PROBAR la paleta bloqueada durante unos segundos y después
+    // vuelve sola. Enseñar lo que se compra vende más que un candado, y
+    // devolverla sola evita que alguien crea que ya la tiene.
+    const antes = Temas.guardado();
+    Temas.aplicar(codigo);
+    msg.innerHTML = `<div class="aviso">Así se ve. Es parte del plan completo.</div>`;
+    setTimeout(() => { Temas.aplicar(antes); verTemas(); }, 4000);
+    return;
+  }
+
+  Temas.elegir(codigo);
+  verTemas();
+
+  try {
+    await api("/atleta/tema", { method: "PUT", body: { tema: codigo } });
+  } catch (err) {
+    // Si el servidor lo rechaza, se revierte: la pantalla no puede
+    // quedar de un color que la cuenta no tiene guardado.
+    Temas.elegir("acero");
+    verTemas();
+    document.getElementById("tema-msg").innerHTML =
+      `<div class="aviso mal">${esc(err.message)}</div>`;
   }
 }
 </script>
