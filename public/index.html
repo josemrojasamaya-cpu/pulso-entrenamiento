@@ -15,5 +15,17 @@
 </script>
 <meta http-equiv="refresh" content="0; url=login.html">
 </head>
-<body><p style="font-family:system-ui;padding:24px">Redirigiendo… <a href="login.html">Entrar</a></p></body>
+<body><p style="font-family:system-ui;padding:24px">Redirigiendo… <a href="login.html">Entrar</a></p><script>
+/* El service worker se registra acá y no sólo en comun.js.
+   comun.js se carga después de entrar, así que quien llega a la portada
+   -y todo analizador automático, que nunca inicia sesión- no lo veía
+   registrado. Peor: la aplicación no quedaba disponible sin conexión
+   hasta el primer acceso con éxito. */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
 </html>

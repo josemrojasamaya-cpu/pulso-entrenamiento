@@ -1,6 +1,7 @@
 {
   "name": "Pulso · Entrenamiento",
   "short_name": "Pulso",
+  "id": "/",
   "description": "Tu rutina de cada día, adaptada a tus medidas, tus condiciones de salud y tu objetivo. Funciona sin conexión.",
   "start_url": "/hoy.html",
   "scope": "/",
@@ -9,7 +10,11 @@
   "background_color": "#0e1216",
   "theme_color": "#131920",
   "lang": "es",
-  "categories": ["health", "fitness", "lifestyle"],
+  "categories": [
+    "health",
+    "fitness",
+    "lifestyle"
+  ],
   "icons": [
     {
       "src": "/icono.svg",
