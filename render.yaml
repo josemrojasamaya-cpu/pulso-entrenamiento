@@ -1,0 +1,32 @@
+# Despliegue en Render.
+#
+# Con este archivo en la raíz, Render lee la configuración sola: no hay
+# que elegir a mano el comando de arranque ni conectar la base. Al crear
+# el servicio se elige "Blueprint" y se apunta al repositorio.
+services:
+  - type: web
+    name: pulso
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    # setup.js crea las tablas si faltan y no toca las que ya existen.
+    # Va en el arranque y no en la construcción, porque en Render la base
+    # todavía no está enlazada durante el build.
+    startCommand: node db/setup.js && npm start
+    healthCheckPath: /login.html
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pulso-db
+          property: connectionString
+      - key: JWT_SECRET
+        # Render la genera sola y no la ve nadie, ni siquiera nosotros.
+        generateValue: true
+      - key: NODE_VERSION
+        value: "22"
+
+databases:
+  - name: pulso-db
+    plan: free
+    databaseName: pulso
+    user: pulso
