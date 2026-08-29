@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.pulso.entrenamiento",
+        "sha256_cert_fingerprints": ["F5:90:76:7B:49:D5:B4:31:C8:CB:1F:A5:56:87:37:CF:65:C8:96:63:06:66:62:0F:87:53:04:9C:B9:B2:B9:7B"]
+      }
+    }]

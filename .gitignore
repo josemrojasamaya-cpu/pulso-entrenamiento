@@ -10,3 +10,9 @@ Thumbs.db
 .idea/
 _tmp_*
 _audit_*
+
+# Llaves de firma de la APK. Si esto llegara a GitHub, cualquiera podría
+# publicar una actualización falsa de la aplicación firmada como nuestra.
+*.keystore
+*.jks
+signing-key-info.txt

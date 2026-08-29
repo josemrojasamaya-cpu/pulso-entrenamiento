@@ -25,7 +25,17 @@ app.get("/sw.js", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "sw.js"));
 });
 
-app.use(express.static(path.join(__dirname, "public")));
+// `dotfiles: "allow"` es necesario para /.well-known/assetlinks.json.
+//
+// Por defecto Express ignora todo lo que empiece con punto, y ese
+// archivo tiene que servirse en esa ruta exacta: es donde Android lo
+// busca para comprobar que el dominio y la aplicación son de la misma
+// persona. Sin él, la aplicación instalada abre con una franja de
+// Chrome arriba, como si fuera una página cualquiera.
+//
+// No expone nada: en public/ no hay otros archivos ocultos, y los que
+// llevan secretos (.env) viven fuera de esa carpeta.
+app.use(express.static(path.join(__dirname, "public"), { dotfiles: "allow" }));
 
 /** Estado del sistema. Declarado antes que los routers para que ningún
  *  middleware de sesión lo tape justo cuando hace falta diagnosticar. */
