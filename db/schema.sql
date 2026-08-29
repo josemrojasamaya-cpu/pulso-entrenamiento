@@ -97,11 +97,6 @@ CREATE TABLE IF NOT EXISTS perfiles (
 ALTER TABLE perfiles
     ADD COLUMN IF NOT EXISTS equipo_casa JSONB NOT NULL DEFAULT '["peso_corporal"]'::jsonb;
 
--- Dónde se entrena HOY, que puede no ser lo habitual. Se guarda por
--- rutina y no en el perfil: cambiar de lugar un día no debería
--- reescribir la preferencia de siempre.
-ALTER TABLE rutinas
-    ADD COLUMN IF NOT EXISTS lugar VARCHAR(20) NOT NULL DEFAULT 'gimnasio';
 
 
 -- ---------------------------------------------------------------------
@@ -254,6 +249,18 @@ CREATE TABLE IF NOT EXISTS rutinas (
 );
 
 CREATE INDEX IF NOT EXISTS idx_rut_usuario ON rutinas (usuario_id, fecha DESC);
+
+-- Dónde se entrena HOY, que puede no ser lo habitual. Se guarda por
+-- rutina y no en el perfil: cambiar de lugar un día no debería
+-- reescribir la preferencia de siempre.
+--
+-- Este ALTER estaba ANTES de la creación de la tabla. En una base que ya
+-- tenía datos no se notaba —la tabla existía de corridas anteriores— y
+-- en una base nueva y vacía el archivo entero se cortaba acá. Es el
+-- riesgo de todo esquema que crece por añadidos: el orden deja de estar
+-- garantizado y sólo se descubre desplegando en limpio.
+ALTER TABLE rutinas
+    ADD COLUMN IF NOT EXISTS lugar VARCHAR(20) NOT NULL DEFAULT 'gimnasio';
 
 CREATE TABLE IF NOT EXISTS rutina_ejercicios (
     id               SERIAL PRIMARY KEY,
