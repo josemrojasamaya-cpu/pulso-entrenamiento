@@ -726,3 +726,16 @@ UPDATE usuarios SET plan = 'gratis', plan_vence = NULL
 -- que siga a la persona cuando entre desde otro dispositivo: alguien que
 -- se armó su tema no quiere volver a elegirlo en cada aparato.
 ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS tema VARCHAR(20) NOT NULL DEFAULT 'acero';
+
+
+-- Foto de perfil.
+--
+-- Se guarda como texto (data URI) dentro del perfil, y no en una tabla
+-- de archivos ni en un servicio externo. La decisión se sostiene por el
+-- tamaño: la imagen se recorta a 256×256 y se comprime antes de subirla,
+-- así que ronda los 20 KB. Mil personas son 20 MB, que cabe de sobra en
+-- el plan gratuito de cualquier base.
+--
+-- Las fotos de PROGRESO son otra cosa —de cuerpo entero, muchas por
+-- persona, y se comparan entre sí— y por eso viven en su propia tabla.
+ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS foto TEXT;

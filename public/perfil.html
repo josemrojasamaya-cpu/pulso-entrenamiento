@@ -62,6 +62,41 @@
 .fon.bloqueada .vp{opacity:.45}
 .fon.subir .vp{display:grid; place-items:center; background:var(--gr-750);
   font-size:22px; color:var(--tx3)}
+
+.retrato{
+  display:flex; align-items:center; gap:18px;
+}
+.retrato .circulo{
+  width:88px; height:88px; border-radius:50%; flex:none; position:relative;
+  background:var(--gr-750); border:2px solid var(--borde); overflow:hidden;
+  display:grid; place-items:center; cursor:pointer; transition:.2s;
+}
+.retrato .circulo:hover{border-color:var(--az)}
+.retrato .circulo img{width:100%; height:100%; object-fit:cover; display:block}
+.retrato .circulo .ini{
+  font-size:30px; font-weight:800; color:var(--az); letter-spacing:.5px;
+}
+.retrato .circulo .cam{
+  position:absolute; bottom:0; left:0; right:0; padding:4px 0;
+  background:rgba(6,10,16,.78); font-size:9.5px; text-align:center;
+  color:#fff; font-weight:700; letter-spacing:.4px;
+}
+.retrato .lado{flex:1; min-width:0}
+.retrato .lado b{display:block; font-size:18px; font-weight:750; letter-spacing:-.3px}
+.retrato .lado span{font-size:13px; color:var(--tx3); display:block; margin-top:2px}
+.retrato .lado .acc{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap}
+.retrato .lado .acc button{
+  padding:8px 14px; border:1px solid var(--borde); border-radius:9px;
+  background:var(--gr-850); color:var(--tx2); font:inherit; font-size:12.5px;
+  font-weight:600; cursor:pointer;
+}
+.retrato .lado .acc button:hover{border-color:var(--az); color:var(--tx)}
+
+/* La foto en la barra de arriba, en todas las pantallas */
+.usuario-chip .retrato-mini{
+  width:26px; height:26px; border-radius:50%; object-fit:cover;
+  border:1px solid var(--borde); flex:none;
+}
 </style>
 </head>
 <body>
@@ -73,6 +108,7 @@
     <h1>Tu perfil</h1>
     <p>De acá salen todas las decisiones del sistema. Vale la pena que esté al día.</p>
   </div>
+  <div id="foto-perfil"></div>
   <div id="plan"></div>
   <div id="temas"></div>
   <div id="fondos"></div>
@@ -94,6 +130,7 @@ const EQUIPOS = [
 
 async function cargar() {
   pintarEstructura("perfil");
+  verFoto();
   verPlan();
   verTemas();
   verFondos();
@@ -701,6 +738,152 @@ function subirFondo(bloqueada) {
     lector.readAsDataURL(archivo);
   };
   inp.click();
+}
+
+/* ── Foto de perfil ───────────────────────────────────────────────── */
+
+let fotoActual = null;
+
+/**
+ * @param {boolean} releer  Si consultar al servidor.
+ *
+ * Después de subir una foto NO se relee: el dato ya está en la mano, la
+ * consulta sólo agrega una espera, y si tarda o falla la foto recién
+ * subida desaparece de la pantalla un instante. Se releía siempre en la
+ * primera versión y ese parpadeo se veía.
+ */
+async function verFoto(releer = true) {
+  if (releer) {
+    // El servidor es la fuente de verdad, y se refresca la copia local:
+    // alguien que entra desde otro teléfono tiene que ver su foto, y la
+    // barra de ese teléfono todavía no la tiene guardada.
+    try {
+      fotoActual = (await api("/atleta/foto")).foto;
+      guardarRetrato(fotoActual);
+    } catch (e) { fotoActual = retratoGuardado(); }
+  }
+
+  const u = Sesion.usuario() || {};
+  const nombre = String(u.nombre || "");
+  // Iniciales: primera letra del nombre y del apellido. Con una sola
+  // palabra, la primera letra sola — nunca dos de la misma palabra, que
+  // se lee como una sigla y no como un nombre.
+  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  const iniciales = partes.length > 1
+    ? (partes[0][0] + partes[1][0]).toUpperCase()
+    : (partes[0] || "?")[0].toUpperCase();
+
+  document.getElementById("foto-perfil").innerHTML = `
+    <div class="tarjeta" style="margin-bottom:16px"><div class="t-cu">
+      <div class="retrato">
+        <div class="circulo" onclick="cambiarFoto()">
+          ${fotoActual
+            ? `<img src="${fotoActual}" alt="Tu foto">`
+            : `<span class="ini">${esc(iniciales)}</span>`}
+          <span class="cam">${fotoActual ? "CAMBIAR" : "AGREGAR"}</span>
+        </div>
+        <div class="lado">
+          <b>${esc(nombre || "Tu perfil")}</b>
+          <span>${esc(u.username ? "@" + u.username : "")}</span>
+          <div class="acc">
+            <button onclick="cambiarFoto()">${fotoActual ? "Cambiar foto" : "Subir foto"}</button>
+            ${fotoActual ? `<button onclick="quitarFoto()">Quitar</button>` : ""}
+          </div>
+        </div>
+      </div>
+      <div id="foto-msg" style="margin-top:12px"></div>
+    </div></div>`;
+
+  pintarRetratoArriba();
+}
+
+/** La foto también en la barra de arriba, donde ya está el nombre. */
+function pintarRetratoArriba() {
+  const chip = document.querySelector(".usuario-chip");
+  if (!chip) return;
+  const viejo = chip.querySelector(".retrato-mini");
+  if (viejo) viejo.remove();
+  if (!fotoActual) return;
+  const img = document.createElement("img");
+  img.className = "retrato-mini";
+  img.src = fotoActual;
+  img.alt = "";
+  chip.insertBefore(img, chip.firstChild);
+}
+
+/**
+ * Recorta a un cuadrado centrado y comprime antes de subir.
+ *
+ * El recorte cuadrado se hace ACÁ y no con CSS: guardar una foto
+ * apaisada entera para después taparle los lados con un círculo es
+ * subir el triple de datos para tirar dos tercios.
+ */
+function cambiarFoto() {
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = "image/*";
+  inp.onchange = () => {
+    const archivo = inp.files && inp.files[0];
+    if (!archivo) return;
+
+    const msg = document.getElementById("foto-msg");
+    msg.innerHTML = `<div class="aviso">Preparando la foto…</div>`;
+
+    const lector = new FileReader();
+    lector.onload = () => {
+      const img = new Image();
+      img.onload = async () => {
+        const LADO = 256;
+        const c = document.createElement("canvas");
+        c.width = c.height = LADO;
+        const g = c.getContext("2d");
+
+        // Cuadrado centrado: se toma el lado más corto y se recorta lo
+        // que sobra del más largo, mitad de cada extremo. Así la cara,
+        // que casi siempre está al centro, no se pierde.
+        const lado = Math.min(img.width, img.height);
+        const sx = (img.width - lado) / 2;
+        const sy = (img.height - lado) / 2;
+        g.drawImage(img, sx, sy, lado, lado, 0, 0, LADO, LADO);
+
+        const datos = c.toDataURL("image/jpeg", 0.82);
+
+        try {
+          await api("/atleta/foto", { method: "PUT", body: { foto: datos } });
+          fotoActual = datos;
+          guardarRetrato(datos);   // para que la barra la tenga sin pedirla
+          verFoto(false);
+          document.getElementById("foto-msg").innerHTML =
+            `<div class="aviso ok">Foto guardada.</div>`;
+        } catch (err) {
+          msg.innerHTML = `<div class="aviso mal">${esc(err.message)}</div>`;
+        }
+      };
+      img.onerror = () => {
+        msg.innerHTML = `<div class="aviso mal">No se pudo leer esa imagen.</div>`;
+      };
+      img.src = lector.result;
+    };
+    lector.onerror = () => {
+      document.getElementById("foto-msg").innerHTML =
+        `<div class="aviso mal">No se pudo abrir el archivo.</div>`;
+    };
+    lector.readAsDataURL(archivo);
+  };
+  inp.click();
+}
+
+async function quitarFoto() {
+  if (!confirm("¿Quitar tu foto de perfil?")) return;
+  try {
+    await api("/atleta/foto", { method: "PUT", body: { foto: "" } });
+    fotoActual = null;
+    guardarRetrato(null);
+    verFoto(false);
+  } catch (err) {
+    document.getElementById("foto-msg").innerHTML =
+      `<div class="aviso mal">${esc(err.message)}</div>`;
+  }
 }
 </script>
 </body>

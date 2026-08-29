@@ -469,4 +469,72 @@ router.put("/tema", async (req, res) => {
     }
 });
 
+
+/* ── Foto de perfil ───────────────────────────────────────────────── */
+
+/**
+ * Guarda la foto de perfil.
+ *
+ * Llega ya recortada y comprimida desde el navegador: subir la foto
+ * original de un teléfono serían tres o cuatro megas por persona, y el
+ * 99% de esos píxeles se descartan al mostrarla en un círculo de
+ * cuarenta píxeles.
+ *
+ * Aun así se comprueba el tamaño acá. Que el navegador *deba* mandar
+ * algo chico no significa que lo haga: quien edite la petición a mano
+ * podría subir un archivo enorme, y sin este límite la tabla de perfiles
+ * crece sin freno.
+ */
+const TOPE_FOTO = 220 * 1024;   // ~160 KB de imagen tras el base64
+
+router.put("/foto", async (req, res) => {
+    const foto = String((req.body || {}).foto || "");
+
+    if (foto === "") {
+        // Cadena vacía significa quitarla, y es una operación legítima.
+        try {
+            await pool.query(
+                `INSERT INTO perfiles (usuario_id, foto) VALUES ($1, NULL)
+                 ON CONFLICT (usuario_id) DO UPDATE SET foto = NULL`,
+                [req.usuario.id]);
+            return res.json({ ok: true, foto: null });
+        } catch (err) {
+            return res.status(500).json({ message: "No se pudo quitar la foto." });
+        }
+    }
+
+    // Sólo imágenes, y sólo los formatos que el navegador produce al
+    // comprimir. Aceptar cualquier data URI dejaría meter SVG, que puede
+    // llevar scripts adentro y se ejecutarían al mostrarlo.
+    if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(foto)) {
+        return res.status(400).json({ message: "Esa imagen no tiene un formato válido." });
+    }
+    if (foto.length > TOPE_FOTO) {
+        return res.status(413).json({ message: "La imagen pesa demasiado. Probá con otra." });
+    }
+
+    try {
+        await pool.query(
+            `INSERT INTO perfiles (usuario_id, foto) VALUES ($1,$2)
+             ON CONFLICT (usuario_id) DO UPDATE SET foto = EXCLUDED.foto`,
+            [req.usuario.id, foto]
+        );
+        res.json({ ok: true });
+    } catch (err) {
+        console.error("[FOTO] guardar:", err.message);
+        res.status(500).json({ message: "No se pudo guardar la foto." });
+    }
+});
+
+/** Sólo la foto. Se pide aparte para no arrastrarla en cada lectura del perfil. */
+router.get("/foto", async (req, res) => {
+    try {
+        const r = await pool.query(
+            "SELECT foto FROM perfiles WHERE usuario_id = $1", [req.usuario.id]);
+        res.json({ foto: r.rowCount ? r.rows[0].foto : null });
+    } catch (err) {
+        res.status(500).json({ message: "No se pudo leer la foto." });
+    }
+});
+
 module.exports = router;

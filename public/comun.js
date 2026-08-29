@@ -191,6 +191,26 @@ const ICONOS = {
   salud:    '<path d="M20.8 5.6a5.5 5.5 0 0 0-7.8 0L12 6.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>'
 };
 
+/**
+ * La foto de perfil, desde el teléfono.
+ *
+ * Se lee del almacenamiento local y no del servidor. Pedirla por red en
+ * cada pantalla haría que la barra aparezca sin foto y la foto entre
+ * medio segundo después, en cada navegación. Se refresca desde el
+ * servidor una vez por sesión, en Perfil.
+ */
+function retratoGuardado() {
+  try { return localStorage.getItem("pulso_foto") || null; }
+  catch (e) { return null; }
+}
+
+function guardarRetrato(dataUrl) {
+  try {
+    if (dataUrl) localStorage.setItem("pulso_foto", dataUrl);
+    else localStorage.removeItem("pulso_foto");
+  } catch (e) { /* sin espacio, se sigue sin foto en la barra */ }
+}
+
 function pintarEstructura(activo) {
   const u = Sesion.usuario();
   if (!u) return;
@@ -204,6 +224,7 @@ function pintarEstructura(activo) {
         </a>
         <div class="der">
           <div class="usuario-chip">
+            ${retratoGuardado() ? `<img class="retrato-mini" src="${retratoGuardado()}" alt="">` : ""}
             <span class="nombre">${esc(String(u.nombre).split(" ")[0])}</span>
             <span class="nivel-pin" id="pin-nivel">—</span>
           </div>

@@ -505,3 +505,13 @@ body::before{transition:background-image .4s ease, opacity .4s ease}
 
 /* «Liso» no lleva velo: no hay nada que atenuar. */
 :root[data-fondo="liso"] body::after{background:none}
+
+
+/* Foto de perfil en la barra de arriba. Se guarda en el teléfono además
+   de en el servidor: si esperara a la respuesta de la red, la barra
+   aparecería sin foto y la foto entraría medio segundo después, en cada
+   pantalla y en cada navegación. */
+.retrato-mini{
+  width:26px; height:26px; border-radius:50%; object-fit:cover;
+  border:1px solid var(--borde); flex:none; margin-right:2px;
+}
